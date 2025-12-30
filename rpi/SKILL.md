@@ -1,0 +1,457 @@
+---
+name: rpi
+description: Use when implementing features from Jira tickets, PRDs, or user requirements. Orchestrates Research-Plan-Implement workflow with quality gates for hallucination, overengineering, and underengineering detection.
+---
+
+# RPI - Research, Plan, Implement (Orchestrator)
+
+Full workflow orchestrator that **invokes individual skills** in sequence with quality gates.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           RPI WORKFLOW                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   INPUT              RESEARCH           AUDIT            PLAN               │
+│  ┌──────┐           ┌──────┐          ┌──────┐         ┌──────┐            │
+│  │ Jira │──────────▶│      │─────────▶│      │────────▶│      │            │
+│  │ PRD  │           │      │  PASS?   │      │  PASS?  │      │            │
+│  │Prompt│           │      │          │      │         │      │            │
+│  └──────┘           └──────┘          └──────┘         └──────┘            │
+│                         │                                  │                │
+│                         ▼                                  ▼                │
+│                    research.md                         plan.md              │
+│                                                                             │
+│                     AUDIT             IMPLEMENT         REVIEW              │
+│                    ┌──────┐          ┌──────┐         ┌──────┐             │
+│               ────▶│      │─────────▶│      │────────▶│      │             │
+│                    │      │  PASS?   │      │         │      │             │
+│                    │      │          │      │         │      │             │
+│                    └──────┘          └──────┘         └──────┘             │
+│                                          │                │                 │
+│                                          ▼                ▼                 │
+│                                       CODE            APPROVED              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## When to Use
+
+Use this skill when:
+- User provides a Jira issue key (e.g., KB-1234)
+- User provides a Confluence PRD URL
+- User describes a feature to implement
+- User says "implement", "build", "create feature", or similar
+
+---
+
+## Workflow - Skill Invocations
+
+The RPI orchestrator invokes individual skills in sequence:
+
+```
+/rpi {input}
+    │
+    ├── Step 1: Invoke /research {input}
+    │   └── Output: research-{feature}.md
+    │
+    ├── Step 2: Invoke /audit research
+    │   └── Gate: Confidence ≥60%, Hallucination ≤20%
+    │   └── If FAIL: Stop and request clarification
+    │
+    ├── Step 3: Invoke /plan
+    │   └── Output: plan-{feature}.md
+    │
+    ├── Step 4: Invoke /audit plan
+    │   └── Gate: Traceability 100%, Balance ≥70%
+    │   └── If FAIL: Revise plan
+    │
+    ├── Step 5: User Approval
+    │   └── Present plan summary
+    │   └── Wait for explicit approval
+    │
+    ├── Step 6: Invoke /implement
+    │   └── Output: Code changes
+    │
+    └── Step 7: Invoke /code-review
+        └── Output: Review with P0/P1/P2 findings
+```
+
+---
+
+## Instructions
+
+### Step 1: Input Detection & Feature Naming
+
+Detect input source and derive feature name:
+
+```
+Input Sources:
+├── Jira Issue (KB-1234)
+│   └── Use mcp__atlassian__getJiraIssue to fetch
+│   └── Feature name = ticket key (e.g., "kb-1234")
+│
+├── Confluence Page (URL)
+│   └── Use mcp__atlassian__getConfluencePage to fetch
+│   └── Feature name = sanitized page title
+│
+└── Direct Prompt ("Add export feature")
+    └── Parse requirements from message
+    └── Feature name = short slug (e.g., "export-feature")
+```
+
+Store feature name for all subsequent skill invocations.
+
+### Step 2: Research Phase
+
+**Invoke the /research skill:**
+
+```
+Use Skill tool:
+  skill: "research"
+  args: "{input}" (the original Jira key, URL, or prompt)
+```
+
+Wait for research skill to complete. It will produce:
+- `.claude/output/research-{feature}.md`
+
+### Step 3: Research Audit
+
+**Invoke the /audit skill for research:**
+
+```
+Use Skill tool:
+  skill: "audit"
+  args: "research"
+```
+
+**Quality Gate Check:**
+| Metric | Threshold | Action if FAIL |
+|--------|-----------|----------------|
+| Confidence | ≥ 60% | Ask user for clarification |
+| Hallucination | ≤ 20% | Remove phantom requirements |
+| Coverage | ≥ 80% | Identify missing information |
+
+**If audit FAILS:**
+```
+STOP the workflow.
+Report findings to user.
+Ask for clarification or additional information.
+Re-run /research after user provides info.
+```
+
+**If audit PASSES:**
+```
+Proceed to Step 4.
+```
+
+### Step 4: Plan Phase
+
+**Invoke the /plan skill:**
+
+```
+Use Skill tool:
+  skill: "plan"
+```
+
+Wait for plan skill to complete. It will produce:
+- `.claude/output/plan-{feature}.md`
+
+### Step 5: Plan Audit
+
+**Invoke the /audit skill for plan:**
+
+```
+Use Skill tool:
+  skill: "audit"
+  args: "plan"
+```
+
+**Quality Gate Check:**
+| Metric | Threshold | Action if FAIL |
+|--------|-----------|----------------|
+| Traceability | 100% | Map missing requirements to tasks |
+| Balance Score | ≥ 70% | Reduce over/underengineering |
+| Pattern Compliance | ≥ 90% | Fix pattern violations |
+
+**If audit FAILS:**
+```
+Report specific issues.
+Revise plan to address findings.
+Re-run /audit plan.
+```
+
+**If audit PASSES:**
+```
+Proceed to Step 6.
+```
+
+### Step 6: User Approval
+
+**Present plan summary and request approval:**
+
+```markdown
+## Implementation Plan Summary
+
+**Feature**: {feature name}
+**Tasks**: {count} tasks
+**Files**: {new count} new, {modified count} modified
+**Complexity**: {low/medium/high}
+
+### Key Decisions
+{List architectural decisions}
+
+### Task Overview
+{List of tasks in sequence}
+
+### Quality Gates Passed
+- Research Audit: PASS (Confidence: X%, Hallucination: Y%)
+- Plan Audit: PASS (Traceability: 100%, Balance: Z%)
+
+---
+
+**Proceed with implementation?** (yes/no)
+```
+
+**Wait for explicit user approval before proceeding.**
+
+If user says "no" or requests changes:
+- Address feedback
+- Re-run relevant phase
+- Present updated summary
+
+### Step 7: Implementation Phase
+
+**Invoke the /implement skill:**
+
+```
+Use Skill tool:
+  skill: "implement"
+```
+
+The implement skill will:
+- Read AGENTS.md and project patterns
+- Execute tasks in dependency order
+- Track progress with TodoWrite
+- Run `flutter analyze` after changes
+- Produce code changes
+
+### Step 8: Code Review
+
+**Invoke the /code-review skill:**
+
+```
+Use Skill tool:
+  skill: "code-review"
+```
+
+The code-review skill will:
+- Review all new/modified files
+- Report P0/P1/P2 findings
+- Check AGENTS.md compliance
+
+**Handle Review Findings:**
+
+| Severity | Action |
+|----------|--------|
+| P0 (Critical) | MUST fix before completing |
+| P1 (Important) | SHOULD fix, discuss with user |
+| P2 (Nice-to-have) | Note for future improvement |
+
+If P0 issues found:
+```
+Fix all P0 issues.
+Re-run /code-review to verify fixes.
+```
+
+---
+
+## Quality Gates Summary
+
+| Gate | Phase | Metrics | Threshold |
+|------|-------|---------|-----------|
+| Gate 1 | Research | Confidence | ≥ 60% |
+| Gate 1 | Research | Hallucination | ≤ 20% |
+| Gate 1 | Research | Coverage | ≥ 80% |
+| Gate 2 | Plan | Traceability | 100% |
+| Gate 2 | Plan | Balance Score | ≥ 70% |
+| Gate 2 | Plan | Pattern Compliance | ≥ 90% |
+| Gate 3 | Implementation | Lint | PASS |
+| Gate 3 | Implementation | P0 Issues | 0 |
+
+---
+
+## Output Files
+
+All outputs saved to `.claude/output/`:
+
+| File | Produced By | Description |
+|------|-------------|-------------|
+| `research-{feature}.md` | /research | Research findings |
+| `audit-{feature}.md` | /audit | Audit reports (multiple) |
+| `plan-{feature}.md` | /plan | Implementation plan |
+| `review-{feature}.md` | /code-review | Code review report |
+
+---
+
+## Error Handling
+
+### Research Fails Audit
+```
+1. Report specific findings (hallucinations, low confidence)
+2. Ask user for clarification
+3. Re-invoke /research with additional context
+4. Re-invoke /audit research
+```
+
+### Plan Fails Audit
+```
+1. Report specific findings (missing coverage, overengineering)
+2. Revise plan based on findings
+3. Re-invoke /audit plan
+```
+
+### Implementation Fails
+```
+1. Stop at failing task
+2. Diagnose issue
+3. Options:
+   a. Fix and continue (minor issue)
+   b. Re-invoke /plan (design issue)
+   c. Re-invoke /research (fundamental issue)
+```
+
+### Code Review Finds P0
+```
+1. List all P0 issues
+2. Fix each P0 issue
+3. Re-invoke /code-review
+4. Repeat until P0 count = 0
+```
+
+---
+
+## Example Execution
+
+```
+User: /rpi KB-1234
+
+Agent: Starting RPI workflow for KB-1234...
+
+## Step 1: Input Detection
+Detected: Jira Issue
+Fetching KB-1234...
+Feature name: kb-1234
+
+## Step 2: Research
+Invoking /research KB-1234...
+[Research skill executes]
+Created: .claude/output/research-kb-1234.md
+
+## Step 3: Research Audit
+Invoking /audit research...
+[Audit skill executes]
+
+Results:
+- Confidence: 75% ✓
+- Hallucination: 12% ✓
+- Coverage: 85% ✓
+
+Gate 1: PASSED
+
+## Step 4: Plan
+Invoking /plan...
+[Plan skill executes]
+Created: .claude/output/plan-kb-1234.md
+
+## Step 5: Plan Audit
+Invoking /audit plan...
+[Audit skill executes]
+
+Results:
+- Traceability: 100% ✓
+- Balance: 78% ✓
+- Pattern Compliance: 95% ✓
+
+Gate 2: PASSED
+
+## Step 6: User Approval
+[Present plan summary]
+
+Proceed with implementation? (yes/no)
+
+User: yes
+
+## Step 7: Implementation
+Invoking /implement...
+[Implement skill executes]
+Code changes complete.
+
+## Step 8: Code Review
+Invoking /code-review...
+[Code review skill executes]
+
+Results:
+- P0: 0 ✓
+- P1: 2
+- P2: 3
+
+Gate 3: PASSED
+
+## Workflow Complete
+
+Feature KB-1234 has been implemented successfully.
+
+Summary:
+- Research: PASSED
+- Plan: PASSED
+- Implementation: COMPLETE
+- Code Review: APPROVED
+
+Files changed:
+- Created: 5 files
+- Modified: 3 files
+
+P1 issues noted for follow-up:
+1. {issue}
+2. {issue}
+```
+
+---
+
+## Quick Reference
+
+### Full Workflow
+```
+/rpi KB-1234              # From Jira
+/rpi {confluence-url}     # From Confluence
+/rpi Add export feature   # From prompt
+```
+
+### Resume/Retry Commands
+```
+/rpi --resume             # Resume from last checkpoint
+/rpi --from research      # Restart from research
+/rpi --from plan          # Restart from plan
+/rpi --from implement     # Restart from implementation
+```
+
+---
+
+## Integration with Individual Skills
+
+This orchestrator uses these skills (each can also be run standalone):
+
+| Skill | Trigger | Use Case |
+|-------|---------|----------|
+| Research | `/research` | Explore before committing to implementation |
+| Audit | `/audit` | Validate any artifact independently |
+| Plan | `/plan` | Create plan when scope is clear |
+| Implement | `/implement` | Execute when plan is ready |
+| Code Review | `/code-review` | Review any code changes |
+
+**When to use individual skills vs /rpi:**
+- Use `/rpi` for complete feature implementation
+- Use individual skills for targeted tasks or exploration
