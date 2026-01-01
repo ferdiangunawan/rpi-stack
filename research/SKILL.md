@@ -15,6 +15,12 @@ Use this skill when:
 - Gathering context about existing code patterns
 - Assessing complexity of a task
 
+## Agent Compatibility
+
+- AskUserQuestion: use the tool in Claude Code; in Codex CLI, ask the user directly and record the answer.
+- Subagents/Task tool: use if available; otherwise run the searches yourself (parallel if possible).
+- OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
+
 ## Instructions
 
 ### Phase 1: Input Gathering
@@ -30,7 +36,7 @@ Use mcp__atlassian__getJiraIssue to extract:
 
 **From Codebase (Using Parallel Exploration):**
 ```
-Use Task tool to launch 2-3 Explore subagents in parallel:
+Use subagents (Task tool) if available; otherwise run the following searches yourself (parallel if possible):
 
 Agent 1 (quick thoroughness):
   "Search for similar features/patterns matching {feature keywords}"
@@ -75,6 +81,56 @@ Identify:
 - Missing information / unclear requirements
 - Technical unknowns
 
+### Phase 4.5: MANDATORY Clarification Gate
+
+**CRITICAL: This phase is BLOCKING. Do not proceed to Phase 5 until all questions are answered.**
+
+When ANY of these are identified in Phase 4:
+- Missing information
+- Unclear requirements
+- Edge cases without explicit behavior
+- Technical unknowns
+- Multiple valid interpretations
+
+**MUST ask the user (AskUserQuestion tool in Claude Code, or direct question in Codex CLI):**
+
+```
+AskUserQuestion(
+  questions: [
+    {
+      question: "When [edge case scenario], what should the UI display?",
+      header: "Edge case",
+      options: [
+        { label: "Option A", description: "..." },
+        { label: "Option B", description: "..." },
+        { label: "Option C", description: "..." }
+      ],
+      multiSelect: false
+    }
+  ]
+)
+```
+
+**Rules:**
+1. NEVER assume behavior - ASK
+2. NEVER write "Recommendation: X" without asking first
+3. NEVER mark "Open Questions" without immediately asking them
+4. Document user's answer in research output
+
+**Anti-Pattern:**
+```markdown
+## Open Questions
+1. What should display when X?
+   - Recommendation: Show "–" ← WRONG! Should have asked user!
+```
+
+**Correct Pattern:**
+```markdown
+## Clarified with User
+1. What should display when X?
+   - User confirmed: Show "–" (via AskUserQuestion or direct question)
+```
+
 ### Phase 5: Confidence Scoring
 
 Calculate confidence across dimensions:
@@ -96,7 +152,7 @@ Thresholds:
 
 ### Output
 
-Create `.claude/output/research-{feature}.md` with:
+Create `OUTPUT_DIR/research-{feature}.md` with:
 
 ```markdown
 # Research: {Feature Name}
@@ -126,6 +182,7 @@ Create `.claude/output/research-{feature}.md` with:
 ```
 
 ## Example
+
 
 ```
 User: Research KB-1234 before we plan

@@ -33,11 +33,64 @@ The Plan skill transforms validated research into an actionable implementation p
 
 ---
 
+## Agent Compatibility
+
+- AskUserQuestion: use the tool in Claude Code; in Codex CLI, ask the user directly and record the answer.
+- OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
+
 ## Planning Phases
 
 ### Phase 1: Architectural Decisions
 
 Before task breakdown, make key architectural decisions:
+
+### Phase 1.5: MANDATORY Edge Case Review
+
+**CRITICAL: This phase is BLOCKING. Cannot proceed to Phase 2 until all edge cases are clarified.**
+
+Before proceeding to task breakdown:
+
+1. **List all edge cases** discovered during planning:
+   - Empty states
+   - Error states
+   - Boundary conditions
+   - Null/zero values
+   - Missing data scenarios
+
+2. **For each edge case without explicit PRD guidance:**
+
+   **MUST ask the user (AskUserQuestion tool in Claude Code, or direct question in Codex CLI):**
+   ```
+   AskUserQuestion(
+     questions: [
+       {
+         question: "For edge case [X], what is the expected behavior?",
+         header: "Edge case",
+         options: [
+           { label: "Option A", description: "..." },
+           { label: "Option B", description: "..." },
+           { label: "Option C", description: "..." }
+         ],
+         multiSelect: false
+       }
+     ]
+   )
+   ```
+
+3. **Document in plan:**
+   ```markdown
+   ## Edge Case Decisions (User Confirmed)
+   | Edge Case | User Decision | Date |
+   |-----------|---------------|------|
+   | All items defective | Show "–" | 2024-01-01 |
+   ```
+
+**Rules:**
+1. NEVER assume edge case behavior - ASK
+2. NEVER proceed with unconfirmed edge cases
+3. Document all user decisions with "(User confirmed via AskUserQuestion or direct question)"
+
+---
 
 ```
 Decision Framework:
@@ -327,7 +380,7 @@ class {Feature}Screen extends ConsumerWidget {
 
 ## Output Template
 
-Generate `.claude/output/plan-{feature}.md`:
+Generate `OUTPUT_DIR/plan-{feature}.md`:
 
 ```markdown
 # Implementation Plan: {Feature Name}

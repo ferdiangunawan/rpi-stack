@@ -1,8 +1,16 @@
-# Claude Code Skills - RPI Framework
+# Claude Code/Codex CLI Skills - RPI Framework
 
 ## Overview
 
 This directory contains custom skills for the RPI (Research, Plan, Implement) methodology - a structured approach to software development that ensures quality through systematic validation.
+
+## Agent Compatibility
+
+These skills are used by both Claude Code and Codex CLI.
+
+- OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
+- SKILLS_DIR: `~/.claude/skills` for Claude Code, `~/.codex/skills` for Codex CLI.
+- Slash commands like `/rpi` are Claude Code syntax; in Codex CLI, invoke the skill by name in the prompt.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -51,6 +59,8 @@ This directory contains custom skills for the RPI (Research, Plan, Implement) me
 
 ### Full RPI Workflow
 
+Claude Code uses slash commands; Codex CLI uses the skill name in the prompt.
+
 ```bash
 # From Jira issue
 /rpi KB-1234
@@ -63,6 +73,8 @@ This directory contains custom skills for the RPI (Research, Plan, Implement) me
 ```
 
 ### Individual Skills
+
+Claude Code uses slash commands; Codex CLI uses the skill name in the prompt.
 
 ```bash
 # Research only
@@ -87,10 +99,10 @@ This directory contains custom skills for the RPI (Research, Plan, Implement) me
 
 ## Output Files
 
-All RPI outputs are saved to `.claude/output/`:
+All RPI outputs are saved to OUTPUT_DIR:
 
 ```
-.claude/output/
+OUTPUT_DIR/
 ├── research-{feature}.md    # Research findings
 ├── plan-{feature}.md        # Implementation plan
 ├── audit-{feature}.md       # Audit reports
@@ -138,7 +150,7 @@ All RPI outputs are saved to `.claude/output/`:
 Each skill is organized in its own subfolder with a `SKILL.md` file:
 
 ```
-~/.claude/skills/
+SKILLS_DIR/
 ├── README.md               # This file
 ├── audit/
 │   └── SKILL.md            # Audit skill definition
@@ -195,16 +207,16 @@ All skills are designed to work with project-specific `AGENTS.md`:
 
 To add a new skill:
 
-1. Create a subfolder: `~/.claude/skills/{skill-name}/`
+1. Create a subfolder: `SKILLS_DIR/{skill-name}/`
 2. Create `SKILL.md` inside the subfolder with:
    - Skill metadata (name, description, trigger)
    - Skill logic and instructions
    - Output format
-3. Restart Claude Code to load the new skill
+3. Restart Claude Code or Codex CLI to load the new skill
 
 Example structure:
 ```
-~/.claude/skills/my-skill/
+SKILLS_DIR/my-skill/
 └── SKILL.md
 ```
 
@@ -228,6 +240,6 @@ Example structure:
 - Follow project conventions exactly
 
 ### "Skill Not Found"
-- Ensure skill folder exists: `~/.claude/skills/{skill-name}/`
+- Ensure skill folder exists: `SKILLS_DIR/{skill-name}/`
 - Ensure `SKILL.md` file exists inside the folder
-- Restart Claude Code to reload skills
+- Restart Claude Code or Codex CLI to reload skills

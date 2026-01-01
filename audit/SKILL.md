@@ -43,6 +43,11 @@ The Audit skill is a quality gate that catches common AI implementation pitfalls
 
 ---
 
+## Agent Compatibility
+
+- AskUserQuestion: use the tool in Claude Code; in Codex CLI, ask the user directly and record the answer.
+- OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
+
 ## Audit Types
 
 ### Type 1: Research Audit
@@ -110,6 +115,44 @@ Thresholds:
 - 21-40%: Warning - Needs clarification
 - 41%+: Fail - Too much invention
 ```
+
+### Hallucination Response Protocol
+
+**CRITICAL: When assumptions are detected, MUST confirm with user before marking as hallucination.**
+
+When audit detects:
+- Assumed Behavior (not in PRD)
+- Invented Edge Cases
+- Unconfirmed Decisions
+
+**MUST ask the user (AskUserQuestion tool in Claude Code, or direct question in Codex CLI) BEFORE marking as "hallucination":**
+
+```
+AskUserQuestion(
+  questions: [
+    {
+      question: "The plan assumes [X behavior]. Is this correct?",
+      header: "Confirm assumption",
+      options: [
+        { label: "Yes, correct", description: "Proceed with this behavior" },
+        { label: "No, should be Y", description: "Change to different behavior" },
+        { label: "Need to discuss", description: "Requires more context" }
+      ],
+      multiSelect: false
+    }
+  ]
+)
+```
+
+**Audit Verdict Rules:**
+- If user confirms assumption → NOT a hallucination, mark as "User Confirmed"
+- If user rejects assumption → Flag as hallucination, require fix
+- If user needs discussion → HALT audit, gather more context
+
+**Rules:**
+1. NEVER auto-fail assumptions - ASK user first
+2. NEVER skip confirmation for edge case behaviors
+3. Document all confirmations: "(User confirmed via AskUserQuestion or direct question)"
 
 ---
 
@@ -328,7 +371,7 @@ Findings:
 
 ## Output Template
 
-Generate `.claude/output/audit-{feature}.md`:
+Generate `OUTPUT_DIR/audit-{feature}.md`:
 
 ```markdown
 # Audit Report: {Feature Name}

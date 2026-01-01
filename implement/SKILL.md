@@ -32,6 +32,11 @@ The Implement skill executes the validated plan systematically:
 
 ---
 
+## Agent Compatibility
+
+- TodoWrite: use the tool in Claude Code; in Codex CLI, use `update_plan` or a simple checklist.
+- Code-review subagents: use if available; otherwise run the code review manually with the code-review skill.
+
 ## Phase 1: Preparation
 
 ### 1.1 Load Context
@@ -73,7 +78,7 @@ Required Reading:
 
 ### 1.3 Todo Initialization
 
-Set up progress tracking using TodoWrite:
+Set up progress tracking using TodoWrite (Claude Code) or `update_plan` (Codex CLI):
 
 ```dart
 // Initialize todos from plan tasks
@@ -84,6 +89,8 @@ TodoWrite([
   // ... all tasks from plan
 ]);
 ```
+
+Codex CLI: mirror the same tasks using `update_plan`.
 
 ---
 
@@ -256,7 +263,7 @@ SizedBox(height: 16)  // ❌ Use Gap.h16
 After each task completion:
 
 ```
-1. Update TodoWrite
+1. Update TodoWrite or `update_plan`/checklist
    - Mark current task completed
    - Mark next task in_progress
 
@@ -315,9 +322,10 @@ dart format --set-exit-if-changed .
 
 ### 4.1 Trigger Code Review
 
-After implementation complete, **automatically trigger code-reviewer subagent**:
+After implementation complete, trigger code review. If subagents are available, use a code-reviewer subagent; otherwise run the code-review skill yourself.
 
 ```
+Claude Code:
 Use Task tool with subagent_type: "code-reviewer"
 
 Prompt: "Review the following files that were just implemented:
@@ -334,6 +342,8 @@ Report findings with severity ratings."
 
 The code review runs automatically - no user action needed.
 Results are displayed in the main conversation.
+
+Codex CLI: run the code-review skill on the modified files.
 
 ### 4.2 Review Checklist
 
@@ -358,7 +368,7 @@ Results are displayed in the main conversation.
     │   ├── Read docs/*.md
     │   ├── Load plan-{feature}.md
     │   ├── Load research-{feature}.md
-    │   └── Initialize TodoWrite
+    │   └── Initialize TodoWrite or `update_plan`
     │
     ├── Phase 2: Execute
     │   ├── For each task:
@@ -477,7 +487,7 @@ Loading context...
    - Dependencies mapped
 
 3. Initializing progress tracking...
-   [TodoWrite initialized with all tasks]
+   [Todos initialized with all tasks]
 
 ## Phase 2: Execution
 

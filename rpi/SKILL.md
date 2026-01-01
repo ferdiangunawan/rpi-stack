@@ -37,6 +37,12 @@ Full workflow orchestrator that **invokes individual skills** in sequence with q
 
 ---
 
+## Agent Compatibility
+
+- OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
+- Slash commands like `/rpi` and "Use Skill tool" are Claude Code syntax; in Codex CLI, invoke the skill by name in the prompt.
+- TodoWrite: use the tool in Claude Code; in Codex CLI, use `update_plan` or a simple checklist.
+
 ## When to Use
 
 Use this skill when:
@@ -115,7 +121,7 @@ Use Skill tool:
 ```
 
 Wait for research skill to complete. It will produce:
-- `.claude/output/research-{feature}.md`
+- `OUTPUT_DIR/research-{feature}.md`
 
 ### Step 3: Research Audit
 
@@ -157,7 +163,7 @@ Use Skill tool:
 ```
 
 Wait for plan skill to complete. It will produce:
-- `.claude/output/plan-{feature}.md`
+- `OUTPUT_DIR/plan-{feature}.md`
 
 ### Step 5: Plan Audit
 
@@ -234,7 +240,7 @@ Use Skill tool:
 The implement skill will:
 - Read AGENTS.md and project patterns
 - Execute tasks in dependency order
-- Track progress with TodoWrite
+- Track progress with TodoWrite (Claude Code) or `update_plan` (Codex CLI)
 - Run `flutter analyze` after changes
 - Produce code changes
 
@@ -285,7 +291,7 @@ Re-run /code-review to verify fixes.
 
 ## Output Files
 
-All outputs saved to `.claude/output/`:
+All outputs saved to OUTPUT_DIR:
 
 | File | Produced By | Description |
 |------|-------------|-------------|
@@ -348,7 +354,7 @@ Feature name: kb-1234
 ## Step 2: Research
 Invoking /research KB-1234...
 [Research skill executes]
-Created: .claude/output/research-kb-1234.md
+Created: OUTPUT_DIR/research-kb-1234.md
 
 ## Step 3: Research Audit
 Invoking /audit research...
@@ -364,7 +370,7 @@ Gate 1: PASSED
 ## Step 4: Plan
 Invoking /plan...
 [Plan skill executes]
-Created: .claude/output/plan-kb-1234.md
+Created: OUTPUT_DIR/plan-kb-1234.md
 
 ## Step 5: Plan Audit
 Invoking /audit plan...

@@ -316,7 +316,7 @@ Compile findings into structured report:
 ## Metadata
 - **Date**: {YYYY-MM-DD}
 - **Files Reviewed**: {count}
-- **Reviewer**: Claude Code
+- **Reviewer**: Claude Code / Codex CLI
 
 ---
 
