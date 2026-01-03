@@ -279,6 +279,101 @@ After each task completion:
 
 ---
 
+## Phase 2.5: Background Audits
+
+After completing each task group (e.g., T1-T3), spawn background security and performance audits.
+
+### 2.5.1 Spawn Background Audits
+
+```markdown
+After task group completion:
+
+1. Collect files created/modified in this group
+2. Spawn background security audit:
+
+   Task tool:
+     subagent_type: "general-purpose"
+     run_in_background: true
+     prompt: |
+       Run /audit-security on these files: {file_list}
+       Write findings to .claude/output/audit-{session}-security.json
+       If any P0 (critical) issues found, report immediately with:
+       "🚨 SECURITY P0: {finding}. File: {file}:{line}. Fix: {fix}"
+
+3. Spawn background performance audit:
+
+   Task tool:
+     subagent_type: "general-purpose"
+     run_in_background: true
+     prompt: |
+       Run /audit-performance on these files: {file_list}
+       Write findings to .claude/output/audit-{session}-performance.json
+       If any P0 (critical) issues found, report immediately with:
+       "⚡ PERFORMANCE P0: {finding}. File: {file}:{line}. Fix: {fix}"
+
+4. Continue with next task group (don't wait for audits)
+```
+
+### 2.5.2 P0 Injection Handling
+
+```markdown
+If background audit injects P0 finding:
+
+1. STOP current task immediately
+2. Read the P0 finding message
+3. Fix the issue in the identified file
+4. Re-run the specific audit on fixed file
+5. Only continue when P0 is resolved
+
+P0 Categories (must fix immediately):
+- Security: Hardcoded credentials, injection vulnerabilities
+- Performance: Memory leaks, infinite loops, blocking main thread
+```
+
+### 2.5.3 End-of-Implementation Audit Sync
+
+```markdown
+Before Phase 3 (Verification):
+
+1. Wait for all background audits to complete
+2. Read audit results from:
+   - .claude/output/audit-{session}-security.json
+   - .claude/output/audit-{session}-performance.json
+3. If any P0 still present: Fix before proceeding
+4. Collect P1/P2 for final summary
+5. Update session quality gates:
+   - security_audit: { passed: true/false, score: X }
+   - performance_audit: { passed: true/false, score: X }
+```
+
+### 2.5.4 Audit Summary in Output
+
+Include in implementation summary:
+
+```markdown
+## Background Audit Results
+
+### Security Audit
+- P0: 0 (fixed during implementation)
+- P1: 2 (noted for review)
+- P2: 1 (optional improvements)
+- Status: PASS
+
+### Performance Audit
+- P0: 0 (fixed during implementation)
+- P1: 3 (noted for review)
+- P2: 2 (optional improvements)
+- Status: PASS
+- Impact: Medium rebuild reduction
+
+### P1 Issues (For Code Review)
+1. [SECURITY] Missing input validation in form_screen.dart:45
+2. [PERFORMANCE] Missing const in header_widget.dart:12
+3. [PERFORMANCE] Consider virtualization for product list
+```
+
+---
+
 ## Phase 3: Verification
 
 ### 3.1 Per-Task Verification

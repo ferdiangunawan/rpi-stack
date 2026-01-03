@@ -57,38 +57,95 @@ Before proceeding to task breakdown:
    - Null/zero values
    - Missing data scenarios
 
-2. **For each edge case without explicit PRD guidance:**
+---
 
-   **MUST ask the user (AskUserQuestion tool in Claude Code, or direct question in Codex CLI):**
-   ```
-   AskUserQuestion(
-     questions: [
-       {
-         question: "For edge case [X], what is the expected behavior?",
-         header: "Edge case",
-         options: [
-           { label: "Option A", description: "..." },
-           { label: "Option B", description: "..." },
-           { label: "Option C", description: "..." }
-         ],
-         multiSelect: false
-       }
-     ]
-   )
-   ```
+#### P-Checkpoints (Plan Questions)
 
-3. **Document in plan:**
+**P1: Edge Case Behavior**
+For each edge case without explicit PRD guidance:
+
+```
+AskUserQuestion(
+  questions: [
+    {
+      question: "Edge case: '{scenario}'. What should happen?",
+      header: "Edge Case",
+      options: [
+        { label: "Show empty state", description: "Display 'No data' or similar message" },
+        { label: "Show default value", description: "Display '--' or 0" },
+        { label: "Hide element", description: "Don't render the component at all" },
+        { label: "Show error", description: "Display error message to user" }
+      ],
+      multiSelect: false
+    }
+  ]
+)
+```
+
+**P2: Architecture Decision**
+For each architectural choice with trade-offs:
+
+```
+AskUserQuestion(
+  questions: [
+    {
+      question: "For '{component}', should we use '{Option A}' or '{Option B}'?",
+      header: "Architecture",
+      options: [
+        { label: "Option A", description: "Benefits: X. Trade-off: Y" },
+        { label: "Option B", description: "Benefits: Y. Trade-off: X" },
+        { label: "Discuss further", description: "Need more context to decide" }
+      ],
+      multiSelect: false
+    }
+  ]
+)
+```
+
+**P3: Scope Boundary**
+When scope is unclear:
+
+```
+AskUserQuestion(
+  questions: [
+    {
+      question: "Should '{feature X}' be included in this implementation?",
+      header: "Scope",
+      options: [
+        { label: "Yes, include", description: "Add to current implementation scope" },
+        { label: "No, defer", description: "Create follow-up ticket for later" },
+        { label: "Partial", description: "Include basic version only, enhance later" }
+      ],
+      multiSelect: false
+    }
+  ]
+)
+```
+
+---
+
+2. **Document in plan:**
    ```markdown
    ## Edge Case Decisions (User Confirmed)
-   | Edge Case | User Decision | Date |
-   |-----------|---------------|------|
-   | All items defective | Show "–" | 2024-01-01 |
+   | Checkpoint | Edge Case | User Decision | Date |
+   |------------|-----------|---------------|------|
+   | P1 | All items defective | Show "–" | 2024-01-01 |
+   | P2 | State management | Use existing controller | 2024-01-01 |
+   | P3 | Export feature | Defer to next sprint | 2024-01-01 |
    ```
 
 **Rules:**
 1. NEVER assume edge case behavior - ASK
 2. NEVER proceed with unconfirmed edge cases
-3. Document all user decisions with "(User confirmed via AskUserQuestion or direct question)"
+3. Document all user decisions with checkpoint ID
+4. Each P-checkpoint MUST be resolved before Phase 2
+
+**Plan Phase Complete Criteria:**
+```
+□ All P1 checkpoints resolved (all edge cases have defined behavior)
+□ All P2 checkpoints resolved (architecture decisions made)
+□ All P3 checkpoints resolved (scope boundaries clear)
+```
 
 ---
 
