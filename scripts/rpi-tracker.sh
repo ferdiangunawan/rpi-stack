@@ -49,7 +49,7 @@ if [ -n "$1" ]; then
         echo -e "${BOLD}╠══════════════════════════════════════════════════════════════════════════════════════╣${NC}"
 
         if [[ ! -f "$SESSION_DIR/index.json" ]]; then
-            echo -e "${BOLD}║${NC}  ${DIM}No sessions found. Start one with: /rpi --session new {input}${NC}"
+            echo -e "${BOLD}║${NC}  ${DIM}No sessions found. Start one with: /rpi {input}${NC}"
             echo -e "${BOLD}╚══════════════════════════════════════════════════════════════════════════════════════╝${NC}"
             exit 0
         fi
@@ -122,7 +122,7 @@ if [ -n "$1" ]; then
         done
 
         if [[ $SESSION_COUNT -eq 0 ]]; then
-            echo -e "${BOLD}║${NC}  ${DIM}No sessions found. Start one with: /rpi --session new {input}${NC}"
+            echo -e "${BOLD}║${NC}  ${DIM}No sessions found. Start one with: /rpi {input}${NC}"
             echo -e "${BOLD}╟──────────────────────────────────────────────────────────────────────────────────────╢${NC}"
         fi
 
@@ -146,7 +146,7 @@ fi
 if [[ -z "$SESSION_FILE" || ! -f "$SESSION_FILE" ]]; then
     echo -e "${YELLOW}No active session found${NC}"
     echo ""
-    echo "Start a new session with: /rpi --session new {input}"
+    echo "Start a new session with: /rpi {input}"
     echo "Or list sessions with:    ./rpi-tracker.sh --list"
     exit 0
 fi

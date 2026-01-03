@@ -60,6 +60,10 @@ The RPI orchestrator invokes individual skills in sequence:
 ```
 /rpi {input}
     │
+    ├── Step 0: Create Session (automatic)
+    │   └── Generate session ID: rpi-{feature}-{YYYYMMDD}-{hash}
+    │   └── Initialize session tracking
+    │
     ├── Step 1: Invoke /research {input}
     │   └── Output: research-{feature}.md
     │
@@ -88,6 +92,42 @@ The RPI orchestrator invokes individual skills in sequence:
 ---
 
 ## Instructions
+
+### Step 0: Session Creation (Automatic)
+
+**Every `/rpi {input}` invocation automatically creates a new session.**
+
+This happens BEFORE any other processing:
+
+```
+1. Parse input to derive feature name (preview):
+   - Jira key: "kb-1234"
+   - URL: sanitized page title
+   - Prompt: short slug (e.g., "export-feature")
+
+2. Generate session ID:
+   rpi-{feature-slug}-{YYYYMMDD}-{6-char-hash}
+   Example: rpi-kb-1234-20260103-a1b2c3
+
+3. Create session directory:
+   mkdir -p ~/.claude/sessions/{session-id}/
+
+4. Initialize session.json with:
+   - id, version, created_at, agent
+   - input.type, input.source, input.feature_name
+   - phase.current = "research", all phases pending
+   - progress.percentage = 0
+
+5. Update ~/.claude/sessions/index.json:
+   - Add session to sessions[]
+   - Set as active_session
+
+6. Announce: "Session created: {session-id}"
+```
+
+**Note:** If `--session resume` is used, skip session creation and load existing session instead.
+
+---
 
 ### Step 1: Input Detection & Feature Naming
 
@@ -429,16 +469,15 @@ P1 issues noted for follow-up:
 
 ## Quick Reference
 
-### Full Workflow
+### Full Workflow (Auto-creates session)
 ```
-/rpi KB-1234              # From Jira
-/rpi {confluence-url}     # From Confluence
-/rpi Add export feature   # From prompt
+/rpi KB-1234              # From Jira (auto-creates new session)
+/rpi {confluence-url}     # From Confluence (auto-creates new session)
+/rpi Add export feature   # From prompt (auto-creates new session)
 ```
 
 ### Session Commands
 ```
-/rpi --session new {input}      # Start new tracked session
 /rpi --session resume {id}      # Resume by session ID
 /rpi --session resume           # Resume active session
 /rpi --session list             # List all sessions
@@ -536,14 +575,18 @@ Example: rpi-kb-4149-20260103-a1b2c3
 
 ### Session Management Instructions
 
-**Starting a New Session:**
+**Starting a New Session (Automatic with any /rpi {input}):**
 ```
+Sessions are automatically created when running /rpi with any input.
+No need for --session new flag.
+
 1. Generate session ID: rpi-{feature-slug}-{YYYYMMDD}-{6-char-hash}
 2. Create directory: ~/.claude/sessions/{session-id}/
 3. Initialize session.json with input details
 4. Update index.json: add to sessions[], set active_session
-5. Proceed with normal RPI workflow
-6. Update session.json after each phase completion
+5. Announce session creation to user
+6. Proceed with normal RPI workflow
+7. Update session.json after each phase completion
 ```
 
 **Resuming a Session:**

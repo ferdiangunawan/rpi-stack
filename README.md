@@ -88,8 +88,8 @@ Research-Plan-Implement workflow system for Claude Code with session tracking, q
 Sessions persist across Claude Code restarts, context compactions, and crashes.
 
 ```bash
-# Start a tracked session
-/rpi --session new KB-1234
+# Any /rpi command auto-creates a tracked session
+/rpi KB-1234
 
 # Resume later (even after context loss)
 /rpi --session resume
@@ -324,8 +324,7 @@ rpi-status          # Quick one-liner (for prompt integration)
 
 ### RPI Commands (in Claude Code)
 ```bash
-/rpi KB-1234                    # Full workflow
-/rpi --session new KB-1234      # Start tracked session
+/rpi KB-1234                    # Full workflow (auto-creates session)
 /rpi --session resume           # Resume active session
 /rpi --session resume {id}      # Resume specific session
 /rpi --session list             # List sessions
