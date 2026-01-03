@@ -90,6 +90,39 @@ sync_templates() {
     fi
 }
 
+setup_native_hooks() {
+    echo -e "${BLUE}Setting up native Claude Code hooks...${NC}"
+
+    local settings_file="$HOME/.claude/settings.json"
+    local rpi_save_cmd="~/.claude/skills/scripts/rpi-session-save.sh"
+
+    # Ensure settings.json exists
+    if [[ ! -f "$settings_file" ]]; then
+        echo '{}' > "$settings_file"
+    fi
+
+    # Check if RPI hooks specifically are already configured
+    if jq -e ".hooks.PreCompact[]?.hooks[]? | select(.command == \"$rpi_save_cmd\")" "$settings_file" >/dev/null 2>&1; then
+        echo -e "${BLUE}  RPI native hooks already configured${NC}"
+        return
+    fi
+
+    # RPI hook entry to add
+    local rpi_hook='{"hooks": [{"type": "command", "command": "~/.claude/skills/scripts/rpi-session-save.sh"}]}'
+
+    # Add RPI hooks to PreCompact and SessionEnd (preserving existing hooks)
+    local updated=$(jq --argjson rpi_hook "$rpi_hook" '
+      .hooks.PreCompact = (.hooks.PreCompact // []) + [$rpi_hook] |
+      .hooks.SessionEnd = (.hooks.SessionEnd // []) + [$rpi_hook]
+    ' "$settings_file")
+
+    echo "$updated" > "$settings_file"
+
+    echo -e "${GREEN}✓ Native hooks configured:${NC}"
+    echo "    PreCompact  → Auto-save RPI session before context compaction"
+    echo "    SessionEnd  → Auto-save RPI session when Claude Code exits"
+}
+
 setup_aliases() {
     echo -e "${BLUE}Setting up shell aliases...${NC}"
 
@@ -140,6 +173,8 @@ case "${1:-all}" in
         echo ""
         sync_templates
         echo ""
+        setup_native_hooks
+        echo ""
         setup_aliases
         ;;
     codex)
@@ -147,6 +182,8 @@ case "${1:-all}" in
         ;;
     hooks)
         sync_hooks
+        echo ""
+        setup_native_hooks
         ;;
     templates)
         sync_templates
@@ -163,16 +200,18 @@ case "${1:-all}" in
         echo ""
         sync_templates
         echo ""
+        setup_native_hooks
+        echo ""
         setup_aliases
         echo ""
-        echo -e "${GREEN}✓ All skills, hooks, templates, and aliases synced!${NC}"
+        echo -e "${GREEN}✓ All skills, hooks, templates, aliases, and native hooks synced!${NC}"
         ;;
     *)
         echo "Usage: $0 [claude|codex|hooks|templates|aliases|all]"
         echo ""
-        echo "  claude    - Sync to ~/.claude/skills (includes hooks, templates & aliases)"
+        echo "  claude    - Sync to ~/.claude/skills (includes hooks, templates, aliases & native hooks)"
         echo "  codex     - Sync to ~/.codex/skills only"
-        echo "  hooks     - Sync hooks to ~/.claude/ only"
+        echo "  hooks     - Sync hooks to ~/.claude/ only (includes native hooks)"
         echo "  templates - Sync templates (sessions) to ~/.claude/ only"
         echo "  aliases   - Setup shell aliases (rpi-tracker, rpi-tracker-list, rpi-status)"
         echo "  all       - Sync everything (default)"
