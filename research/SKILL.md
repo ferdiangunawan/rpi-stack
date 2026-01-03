@@ -92,18 +92,23 @@ When ANY of these are identified in Phase 4:
 - Technical unknowns
 - Multiple valid interpretations
 
-**MUST ask the user (AskUserQuestion tool in Claude Code, or direct question in Codex CLI):**
+---
+
+#### R-Checkpoints (Research Questions)
+
+**R1: Requirement Ambiguity**
+When a requirement has multiple interpretations:
 
 ```
 AskUserQuestion(
   questions: [
     {
-      question: "When [edge case scenario], what should the UI display?",
-      header: "Edge case",
+      question: "Requirement '{X}' could mean '{A}' or '{B}'. Which interpretation is correct?",
+      header: "Requirement",
       options: [
-        { label: "Option A", description: "..." },
-        { label: "Option B", description: "..." },
-        { label: "Option C", description: "..." }
+        { label: "Interpretation A", description: "{details of A}" },
+        { label: "Interpretation B", description: "{details of B}" },
+        { label: "Neither", description: "Let me explain..." }
       ],
       multiSelect: false
     }
@@ -111,11 +116,61 @@ AskUserQuestion(
 )
 ```
 
+**R2: Missing Information**
+When the PRD/Jira doesn't specify something needed:
+
+```
+AskUserQuestion(
+  questions: [
+    {
+      question: "The PRD doesn't specify '{X}'. What should the behavior be?",
+      header: "Missing Spec",
+      options: [
+        { label: "Option A", description: "{behavior A}" },
+        { label: "Option B", description: "{behavior B}" },
+        { label: "Skip for now", description: "Mark as open question for stakeholder" }
+      ],
+      multiSelect: false
+    }
+  ]
+)
+```
+
+**R3: Technical Unknowns**
+When technical feasibility or approach is uncertain:
+
+```
+AskUserQuestion(
+  questions: [
+    {
+      question: "Implementing '{X}' requires choosing between '{A}' and '{B}'. Which approach?",
+      header: "Technical",
+      options: [
+        { label: "Approach A", description: "Pros: X, Cons: Y" },
+        { label: "Approach B", description: "Pros: Y, Cons: Z" },
+        { label: "Need more research", description: "Defer decision, gather more info" }
+      ],
+      multiSelect: false
+    }
+  ]
+)
+```
+
+---
+
 **Rules:**
 1. NEVER assume behavior - ASK
 2. NEVER write "Recommendation: X" without asking first
 3. NEVER mark "Open Questions" without immediately asking them
 4. Document user's answer in research output
+5. Each R-checkpoint MUST be resolved before Phase 5
+
+**Research Phase Complete Criteria:**
+```
+□ All R1 checkpoints resolved (no ambiguous requirements)
+□ All R2 checkpoints resolved (no missing info without explicit skip)
+□ All R3 checkpoints resolved (technical approach decided)
+```
 
 **Anti-Pattern:**
 ```markdown
@@ -127,8 +182,8 @@ AskUserQuestion(
 **Correct Pattern:**
 ```markdown
 ## Clarified with User
-1. What should display when X?
-   - User confirmed: Show "–" (via AskUserQuestion or direct question)
+1. What should display when X? [R2]
+   - User confirmed: Show "–" (via AskUserQuestion)
 ```
 
 ### Phase 5: Confidence Scoring

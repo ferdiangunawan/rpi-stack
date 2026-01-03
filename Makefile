@@ -18,19 +18,25 @@ SKILLS := $(wildcard */SKILL.md)
 SKILL_DIRS := $(dir $(SKILLS))
 ROOT_SKILL := SKILL.md
 
-.PHONY: all install claude codex clean diff help
+.PHONY: all install claude codex clean diff help tracker tracker-list status
 
 # Default target
 all: install
 
 help:
-	@echo "Skills Repository - Sync Commands"
+	@echo "Skills Repository - Commands"
 	@echo ""
-	@echo "  make install  - Copy skills to both ~/.claude/skills and ~/.codex/skills"
-	@echo "  make claude   - Copy skills to ~/.claude/skills only"
-	@echo "  make codex    - Copy skills to ~/.codex/skills only"
-	@echo "  make clean    - Remove skills from destinations (preserves system folders)"
-	@echo "  make diff     - Show differences between repo and installed skills"
+	@echo "Sync Commands:"
+	@echo "  make install      - Copy skills to both ~/.claude/skills and ~/.codex/skills"
+	@echo "  make claude       - Copy skills to ~/.claude/skills only"
+	@echo "  make codex        - Copy skills to ~/.codex/skills only"
+	@echo "  make clean        - Remove skills from destinations (preserves system folders)"
+	@echo "  make diff         - Show differences between repo and installed skills"
+	@echo ""
+	@echo "RPI Session Tracker:"
+	@echo "  make tracker      - Show active session (detailed view)"
+	@echo "  make tracker-list - List all sessions with progress"
+	@echo "  make status       - Quick one-liner status"
 	@echo ""
 	@echo "Current skills:"
 	@for dir in $(SKILL_DIRS); do echo "  - $${dir%/}"; done
@@ -88,3 +94,13 @@ clean:
 	@rm -f $(CLAUDE_SKILLS)/$(ROOT_SKILL) 2>/dev/null || true
 	@rm -f $(CODEX_SKILLS)/$(ROOT_SKILL) 2>/dev/null || true
 	@echo "✓ Skills removed (system folders preserved)"
+
+# RPI Session Tracker shortcuts
+tracker:
+	@./scripts/rpi-tracker.sh
+
+tracker-list:
+	@./scripts/rpi-tracker.sh --list
+
+status:
+	@./scripts/rpi-status.sh

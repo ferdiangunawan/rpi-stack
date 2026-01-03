@@ -436,12 +436,139 @@ P1 issues noted for follow-up:
 /rpi Add export feature   # From prompt
 ```
 
+### Session Commands
+```
+/rpi --session new {input}      # Start new tracked session
+/rpi --session resume {id}      # Resume by session ID
+/rpi --session resume           # Resume active session
+/rpi --session list             # List all sessions
+/rpi --session status           # Show current session status (CLI tracker)
+```
+
 ### Resume/Retry Commands
 ```
 /rpi --resume             # Resume from last checkpoint
 /rpi --from research      # Restart from research
 /rpi --from plan          # Restart from plan
 /rpi --from implement     # Restart from implementation
+```
+
+---
+
+## Session Tracking System
+
+Sessions enable cross-session continuity and progress tracking.
+
+### Session ID Format
+```
+rpi-{feature-slug}-{YYYYMMDD}-{short-hash}
+Example: rpi-kb-4149-20260103-a1b2c3
+```
+
+### Session Storage (Global)
+```
+~/.claude/sessions/               # Global location (works from any project)
+  index.json                      # Session registry
+  {session-id}/
+    session.json                  # Core session data
+    context-summary.md            # Human-readable context
+```
+
+### Session Schema
+```json
+{
+  "id": "rpi-{feature}-{date}-{hash}",
+  "version": "1.0",
+  "created_at": "ISO timestamp",
+  "updated_at": "ISO timestamp",
+  "agent": "claude-code",
+
+  "input": {
+    "type": "jira|confluence|prompt",
+    "source": "KB-1234",
+    "feature_name": "kb-1234"
+  },
+
+  "phase": {
+    "current": "research|plan|implement|review|complete",
+    "research": { "status": "pending|in_progress|complete|failed" },
+    "plan": { "status": "..." },
+    "implement": {
+      "status": "...",
+      "current_task": "T3",
+      "tasks_completed": ["T1", "T2"],
+      "tasks_remaining": ["T4", "T5"]
+    },
+    "review": { "status": "..." }
+  },
+
+  "progress": {
+    "percentage": 45,
+    "tasks_total": 5,
+    "tasks_done": 2,
+    "quality_gates": {
+      "research_audit": { "passed": true, "score": 95 },
+      "plan_audit": { "passed": true, "score": 88 },
+      "security_audit": { "passed": null },
+      "performance_audit": { "passed": null },
+      "code_review": { "passed": null }
+    }
+  },
+
+  "artifacts": {
+    "research": ".claude/output/research-{feature}.md",
+    "plan": ".claude/output/plan-{feature}.md"
+  },
+
+  "context": {
+    "key_decisions": [],
+    "blockers": [],
+    "notes": ""
+  },
+
+  "continuation": {
+    "last_action": "Completed T2: Create domain model",
+    "next_action": "Start T3: Create service layer",
+    "resume_prompt": "Continue RPI session {id}. Last: T2. Next: T3."
+  }
+}
+```
+
+### Session Management Instructions
+
+**Starting a New Session:**
+```
+1. Generate session ID: rpi-{feature-slug}-{YYYYMMDD}-{6-char-hash}
+2. Create directory: ~/.claude/sessions/{session-id}/
+3. Initialize session.json with input details
+4. Update index.json: add to sessions[], set active_session
+5. Proceed with normal RPI workflow
+6. Update session.json after each phase completion
+```
+
+**Resuming a Session:**
+```
+1. If ID provided: Load ~/.claude/sessions/{id}/session.json
+2. If no ID: Load active_session from index.json
+3. Read continuation.resume_prompt for context
+4. Resume from phase.current
+5. Continue tracking progress
+```
+
+**Session Auto-Save Points:**
+```
+- After research completion
+- After audit pass/fail
+- After plan completion
+- After each implementation task
+- After code review
+- On any error or blocker
+```
+
+**Displaying Session Status:**
+```
+Run: skills/scripts/rpi-tracker.sh [session-id]
+Or:  skills/scripts/rpi-status.sh (one-liner)
 ```
 
 ---
