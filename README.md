@@ -127,9 +127,9 @@ rpi-tracker-list                   # List all sessions
 ## Directory Structure
 
 ```
-skills/
+rpi-stack/
 ├── Makefile              # Make-based installer
-├── install.sh            # Shell script installer
+├── install.sh            # Shell script installer (syncs + configures hooks)
 ├── README.md             # This file
 ├── SKILL.md              # Root skill documentation
 ├── audit/
@@ -150,20 +150,23 @@ skills/
 │   └── SKILL.md          # Orchestrator with session tracking
 ├── scripts/
 │   ├── rpi-tracker.sh    # CLI ASCII tracker
-│   └── rpi-status.sh     # Quick status one-liner
+│   ├── rpi-status.sh     # Quick status one-liner
+│   └── rpi-session-save.sh  # Auto-save for native hooks
 ├── hooks/
 │   ├── hookify.rpi-session-autosave.local.md
 │   ├── hookify.rpi-phase-transition.local.md
 │   ├── hookify.rpi-audit-before-implement.local.md
 │   └── hookify.rpi-p0-blocker.local.md
-└── templates/
-    └── sessions/
-        └── index.json        # Session tracker template
+├── templates/
+│   └── sessions/
+│       └── index.json    # Session tracker template
+└── docs/
+    └── claude-code-hooks-reference.md  # Hook events reference
 ```
 
 ## Hookify Integration
 
-Hooks are stored in `skills/hooks/` and synced to `~/.claude/` during install:
+Hooks are stored in `hooks/` and synced to `~/.claude/` during install:
 
 | Hook | Purpose |
 |------|---------|
@@ -171,3 +174,21 @@ Hooks are stored in `skills/hooks/` and synced to `~/.claude/` during install:
 | `hookify.rpi-phase-transition.local.md` | Track phase changes |
 | `hookify.rpi-audit-before-implement.local.md` | Enforce audit before implement |
 | `hookify.rpi-p0-blocker.local.md` | Block completion with P0 issues |
+
+## Native Claude Code Hooks
+
+In addition to Hookify, `install.sh` configures native Claude Code hooks in `~/.claude/settings.json`:
+
+| Hook Event | Purpose |
+|------------|---------|
+| `PreCompact` | Auto-save RPI session before context compaction |
+| `SessionEnd` | Auto-save RPI session when Claude Code exits |
+
+These ensure RPI session state is preserved even if context runs out or session ends unexpectedly.
+
+**Verify configuration:**
+```bash
+cat ~/.claude/settings.json | jq '.hooks'
+```
+
+See `docs/claude-code-hooks-reference.md` for detailed hook documentation.
