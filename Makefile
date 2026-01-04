@@ -18,7 +18,7 @@ SKILLS := $(wildcard */SKILL.md)
 SKILL_DIRS := $(dir $(SKILLS))
 ROOT_SKILL := SKILL.md
 
-.PHONY: all install claude codex clean diff help tracker tracker-list status
+.PHONY: all install claude codex clean diff help tracker tracker-list status progress
 
 # Default target
 all: install
@@ -37,6 +37,7 @@ help:
 	@echo "  make tracker      - Show active session (detailed view)"
 	@echo "  make tracker-list - List all sessions with progress"
 	@echo "  make status       - Quick one-liner status"
+	@echo "  make progress     - Update session progress (shows help)"
 	@echo ""
 	@echo "Current skills:"
 	@for dir in $(SKILL_DIRS); do echo "  - $${dir%/}"; done
@@ -104,3 +105,6 @@ tracker-list:
 
 status:
 	@./scripts/rpi-status.sh
+
+progress:
+	@./scripts/rpi-progress.sh --help

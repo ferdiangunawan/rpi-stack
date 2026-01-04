@@ -726,3 +726,30 @@ Defining test approach:
 
 Ready for plan audit? [Proceeding to /audit plan]
 ```
+
+---
+
+## Progress Tracking (MANDATORY when called from RPI)
+
+**If this skill is invoked as part of an RPI workflow, you MUST update progress:**
+
+### On Plan Start
+```bash
+~/.claude/skills/scripts/rpi-progress.sh --phase plan --status in_progress --last "Starting planning" --next "Complete implementation plan"
+```
+
+### On Plan Complete (before audit)
+```bash
+~/.claude/skills/scripts/rpi-progress.sh --phase plan --status complete --last "Plan complete" --next "Plan audit"
+```
+
+### After Plan Audit Pass
+```bash
+~/.claude/skills/scripts/rpi-progress.sh --audit plan --passed true --score {score} --last "Plan audit passed" --next "Await user approval"
+```
+
+### Progress Values
+- Plan started: 20%
+- Plan complete: 25%
+- Plan audit pass: 30%
+- User approval: 35%

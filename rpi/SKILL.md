@@ -93,39 +93,113 @@ The RPI orchestrator invokes individual skills in sequence:
 
 ## Instructions
 
-### Step 0: Session Creation (Automatic)
+### Step 0: Session Creation (MANDATORY - DO THIS FIRST)
 
-**Every `/rpi {input}` invocation automatically creates a new session.**
+**CRITICAL: You MUST execute these steps BEFORE any other processing. Do NOT skip this step.**
 
-This happens BEFORE any other processing:
+If `--session resume {id}` is passed, skip to "Resume Existing Session" below. Otherwise, create a new session:
 
+#### 0.1 Parse Input & Generate Session ID
+
+First, derive the feature name from the input:
+- **Jira key** (e.g., KB-1234) → feature = `kb-1234` (lowercase)
+- **Confluence URL** → feature = sanitized page title (lowercase, spaces to hyphens)
+- **Direct prompt** → feature = short slug (e.g., "export-feature", max 30 chars)
+
+Then generate a 6-character random hash and create the session ID:
 ```
-1. Parse input to derive feature name (preview):
-   - Jira key: "kb-1234"
-   - URL: sanitized page title
-   - Prompt: short slug (e.g., "export-feature")
+rpi-{feature-slug}-{YYYYMMDD}-{6-char-hash}
+```
+Example: `rpi-kb-1234-20260104-a1b2c3`
 
-2. Generate session ID:
-   rpi-{feature-slug}-{YYYYMMDD}-{6-char-hash}
-   Example: rpi-kb-1234-20260103-a1b2c3
+#### 0.2 Create Session Directory
 
-3. Create session directory:
-   mkdir -p ~/.claude/sessions/{session-id}/
-
-4. Initialize session.json with:
-   - id, version, created_at, agent
-   - input.type, input.source, input.feature_name
-   - phase.current = "research", all phases pending
-   - progress.percentage = 0
-
-5. Update ~/.claude/sessions/index.json:
-   - Add session to sessions[]
-   - Set as active_session
-
-6. Announce: "Session created: {session-id}"
+**Use the Bash tool:**
+```bash
+mkdir -p ~/.claude/sessions/{session-id}
 ```
 
-**Note:** If `--session resume` is used, skip session creation and load existing session instead.
+#### 0.3 Create session.json
+
+**Use the Write tool** to create `~/.claude/sessions/{session-id}/session.json` with this content (replace placeholders):
+
+```json
+{
+  "id": "{session-id}",
+  "version": "1.0",
+  "created_at": "{current ISO timestamp}",
+  "updated_at": "{current ISO timestamp}",
+  "agent": "claude-code",
+  "input": {
+    "type": "{jira|confluence|prompt}",
+    "source": "{original input}",
+    "feature_name": "{feature-slug}"
+  },
+  "phase": {
+    "current": "research",
+    "research": { "status": "pending" },
+    "plan": { "status": "pending" },
+    "implement": { "status": "pending", "current_task": null, "tasks_completed": [], "tasks_remaining": [] },
+    "review": { "status": "pending" }
+  },
+  "progress": {
+    "percentage": 0,
+    "tasks_total": 0,
+    "tasks_done": 0,
+    "quality_gates": {
+      "research_audit": { "passed": null, "score": null },
+      "plan_audit": { "passed": null, "score": null },
+      "code_review": { "passed": null, "score": null }
+    }
+  },
+  "artifacts": {},
+  "context": { "key_decisions": [], "blockers": [], "notes": "" },
+  "continuation": {
+    "last_action": "Session created",
+    "next_action": "Start research phase",
+    "resume_prompt": "Continue RPI session {session-id}. Phase: research. Progress: 0%"
+  }
+}
+```
+
+#### 0.4 Update Session Registry
+
+**Use the Read tool** to read `~/.claude/sessions/index.json`.
+
+**Use the Edit tool** to update it:
+1. Add `"{session-id}"` to the `sessions` array
+2. Set `active_session` to `"{session-id}"`
+
+If index.json doesn't exist, **use the Write tool** to create it:
+```json
+{
+  "version": "1.0",
+  "sessions": ["{session-id}"],
+  "active_session": "{session-id}"
+}
+```
+
+#### 0.5 Announce Session
+
+Output to the user:
+```
+✓ Session created: {session-id}
+  Proceeding with research phase...
+```
+
+**Only after completing steps 0.1-0.5, proceed to Step 1.**
+
+---
+
+#### Resume Existing Session
+
+If `--session resume` or `--session resume {id}` is used:
+
+1. **Read** `~/.claude/sessions/index.json` to get `active_session` (if no ID provided)
+2. **Read** `~/.claude/sessions/{session-id}/session.json`
+3. **Check** `phase.current` to determine where to resume
+4. **Announce**: `Resuming session: {session-id} at phase: {phase}`
+5. **Skip to** the appropriate step based on `phase.current`
 
 ---
 
@@ -613,6 +687,104 @@ No need for --session new flag.
 Run: skills/scripts/rpi-tracker.sh [session-id]
 Or:  skills/scripts/rpi-status.sh (one-liner)
 ```
+
+---
+
+## Progress Tracking (MANDATORY)
+
+**CRITICAL: You MUST update progress after EVERY phase transition and task completion.**
+
+### Progress Formula
+
+| Phase | Action | Progress |
+|-------|--------|----------|
+| Research | Phase started | 5% |
+| Research | Research complete | 10% |
+| Research | Audit PASS | 15% |
+| Plan | Plan started | 20% |
+| Plan | Plan complete | 25% |
+| Plan | Audit PASS | 30% |
+| Approval | User approved | 35% |
+| Implement | Per task | 35% + (55% / tasks_total) per task |
+| Review | Review started | 90% |
+| Complete | Review PASS | 100% |
+
+### Update Commands
+
+Use Bash to run the progress update script:
+
+```bash
+# When starting a phase
+~/.claude/skills/scripts/rpi-progress.sh --phase research --status in_progress
+
+# When completing a phase
+~/.claude/skills/scripts/rpi-progress.sh --phase research --status complete
+
+# When audit passes
+~/.claude/skills/scripts/rpi-progress.sh --audit research --passed true --score 85
+
+# When setting total tasks (before implementation)
+~/.claude/skills/scripts/rpi-progress.sh --tasks-total 5
+
+# When starting a task
+~/.claude/skills/scripts/rpi-progress.sh --task-start T1 --last "Starting T1" --next "Complete T1"
+
+# When completing a task
+~/.claude/skills/scripts/rpi-progress.sh --task-done T1 --last "Completed T1" --next "Start T2"
+
+# When moving to implementation
+~/.claude/skills/scripts/rpi-progress.sh --phase implement --tasks-total 5
+```
+
+### Progress Update Checkpoints
+
+**You MUST run progress updates at these exact points:**
+
+1. **After Step 0 (Session Created)**
+   ```bash
+   ~/.claude/skills/scripts/rpi-progress.sh --phase research --status pending
+   ```
+
+2. **After Step 2 (Research Complete)**
+   ```bash
+   ~/.claude/skills/scripts/rpi-progress.sh --phase research --status complete
+   ```
+
+3. **After Step 3 (Research Audit)**
+   ```bash
+   ~/.claude/skills/scripts/rpi-progress.sh --audit research --passed true --score {score}
+   ```
+
+4. **After Step 4 (Plan Complete)**
+   ```bash
+   ~/.claude/skills/scripts/rpi-progress.sh --phase plan --status complete
+   ```
+
+5. **After Step 5 (Plan Audit)**
+   ```bash
+   ~/.claude/skills/scripts/rpi-progress.sh --audit plan --passed true --score {score}
+   ```
+
+6. **After Step 6 (User Approval)**
+   ```bash
+   ~/.claude/skills/scripts/rpi-progress.sh --set 35 --last "User approved plan" --next "Start implementation"
+   ```
+
+7. **Before Step 7 (Implementation Start)**
+   ```bash
+   ~/.claude/skills/scripts/rpi-progress.sh --phase implement --tasks-total {count}
+   ```
+
+8. **After EACH task in Step 7**
+   ```bash
+   ~/.claude/skills/scripts/rpi-progress.sh --task-done T{n} --last "Completed T{n}" --next "Start T{n+1}"
+   ```
+
+9. **After Step 8 (Code Review)**
+   ```bash
+   ~/.claude/skills/scripts/rpi-progress.sh --audit code_review --passed true --score {score}
+   ~/.claude/skills/scripts/rpi-progress.sh --phase complete
+   ```
 
 ---
 

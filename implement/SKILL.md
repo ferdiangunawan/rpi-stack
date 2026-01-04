@@ -258,7 +258,9 @@ Container(
 SizedBox(height: 16)  // ❌ Use Gap.h16
 ```
 
-### 2.4 Progress Tracking
+### 2.4 Progress Tracking (MANDATORY)
+
+**CRITICAL: You MUST update the RPI session after EACH task completion.**
 
 After each task completion:
 
@@ -267,15 +269,49 @@ After each task completion:
    - Mark current task completed
    - Mark next task in_progress
 
-2. Log progress
+2. Update RPI Session (MANDATORY)
+   - Run the progress update script
+   - This updates progress.percentage, tasks_done, continuation fields
+
+3. Log progress
    - Files created/modified
    - Acceptance criteria met
    - Any deviations from plan
 
-3. Checkpoint
+4. Checkpoint
    - Run flutter analyze
    - Fix any issues before proceeding
 ```
+
+#### Session Update Commands
+
+**Before starting first task:**
+```bash
+~/.claude/skills/scripts/rpi-progress.sh --phase implement --tasks-total {count}
+~/.claude/skills/scripts/rpi-progress.sh --task-start T1 --next "Complete T1: {task_title}"
+```
+
+**After each task completion:**
+```bash
+~/.claude/skills/scripts/rpi-progress.sh --task-done T{n} --last "Completed T{n}: {task_title}" --next "Start T{n+1}: {next_task_title}"
+~/.claude/skills/scripts/rpi-progress.sh --task-start T{n+1}
+```
+
+**After final task:**
+```bash
+~/.claude/skills/scripts/rpi-progress.sh --task-done T{final} --last "Completed all implementation tasks" --next "Code review"
+```
+
+#### Progress Formula During Implementation
+
+Progress is calculated as: `35% + (55% / tasks_total) * tasks_done`
+
+Example with 5 tasks:
+- T1 complete: 35% + (55/5)*1 = 46%
+- T2 complete: 35% + (55/5)*2 = 57%
+- T3 complete: 35% + (55/5)*3 = 68%
+- T4 complete: 35% + (55/5)*4 = 79%
+- T5 complete: 35% + (55/5)*5 = 90%
 
 ---
 

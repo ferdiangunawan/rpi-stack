@@ -142,6 +142,7 @@ setup_aliases() {
         "alias rpi-tracker='~/.claude/skills/scripts/rpi-tracker.sh'"
         "alias rpi-tracker-list='~/.claude/skills/scripts/rpi-tracker.sh --list'"
         "alias rpi-status='~/.claude/skills/scripts/rpi-status.sh'"
+        "alias rpi-progress='~/.claude/skills/scripts/rpi-progress.sh'"
     )
 
     # Marker to identify our aliases block
@@ -162,6 +163,7 @@ setup_aliases() {
         echo "    rpi-tracker       # Active session (detailed)"
         echo "    rpi-tracker-list  # All sessions"
         echo "    rpi-status        # Quick status"
+        echo "    rpi-progress      # Update session progress"
     fi
 }
 

@@ -236,6 +236,29 @@ Create `OUTPUT_DIR/research-{feature}.md` with:
 {PROCEED / CLARIFY / HALT}
 ```
 
+---
+
+## Progress Tracking (MANDATORY when called from RPI)
+
+**If this skill is invoked as part of an RPI workflow, you MUST update progress:**
+
+### On Research Start
+```bash
+~/.claude/skills/scripts/rpi-progress.sh --phase research --status in_progress --last "Starting research" --next "Complete research analysis"
+```
+
+### On Research Complete (before audit)
+```bash
+~/.claude/skills/scripts/rpi-progress.sh --phase research --status complete --last "Research complete" --next "Research audit"
+```
+
+### Progress Values
+- Research started: 5%
+- Research complete: 10%
+- Research audit pass: 15%
+
+---
+
 ## Example
 
 
