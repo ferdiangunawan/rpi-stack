@@ -189,6 +189,15 @@ sudo apt install jq
 
 ### For Claude Code Users
 
+**Recommended: Use Edit Mode**
+
+Run Claude Code in **Edit Mode** (not Plan Mode) when using RPI Stack:
+- RPI Stack has its own `/plan` skill with P1/P2/P3 checkpoints
+- Claude's Plan Mode conflicts with RPI's planning workflow
+- Edit Mode allows full editing capabilities needed by `/implement`
+
+> **Note:** RPI Stack still verifies before acting. The `/research` and `/plan` skills use `AskUserQuestion` at mandatory checkpoints (R1/R2/R3, P1/P2/P3) to clarify requirements and get approval before implementation. This provides the same safeguards as Plan Mode without the editing restrictions.
+
 **Required: Hookify Plugin**
 
 ```bash
