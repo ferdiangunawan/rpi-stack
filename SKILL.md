@@ -1,4 +1,4 @@
-# Claude Code/Codex CLI Skills - RPI Framework
+    # Claude Code/Codex CLI/Copilot CLI Skills - RPI Framework
 
 ## Overview
 
@@ -6,11 +6,13 @@ This directory contains custom skills for the RPI (Research, Plan, Implement) me
 
 ## Agent Compatibility
 
-These skills are used by both Claude Code and Codex CLI.
+These skills are compatible with Claude Code, Codex CLI, and GitHub Copilot CLI.
 
-- OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
-- SKILLS_DIR: `~/.claude/skills` for Claude Code, `~/.codex/skills` for Codex CLI.
-- Slash commands like `/rpi` are Claude Code syntax; in Codex CLI, invoke the skill by name in the prompt.
+| Agent | Skills Directory | Output Directory | Invoke Method |
+|-------|------------------|------------------|---------------|
+| Claude Code | `~/.claude/skills` | `.claude/output` | `/skill-name` (slash commands) |
+| Codex CLI | `~/.codex/skills` | `.codex/output` | Skill name in prompt |
+| Copilot CLI | `~/.copilot/skills` | `.copilot/output` | `/skills` command |
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -59,7 +61,7 @@ These skills are used by both Claude Code and Codex CLI.
 
 ### Full RPI Workflow
 
-Claude Code uses slash commands; Codex CLI uses the skill name in the prompt.
+Claude Code uses slash commands; Codex CLI and Copilot CLI can use skill names in prompts or the `/skills` command.
 
 ```bash
 # From Jira issue
@@ -74,7 +76,7 @@ Claude Code uses slash commands; Codex CLI uses the skill name in the prompt.
 
 ### Individual Skills
 
-Claude Code uses slash commands; Codex CLI uses the skill name in the prompt.
+Claude Code uses slash commands; Codex CLI and Copilot CLI use skill names in prompts.
 
 ```bash
 # Research only

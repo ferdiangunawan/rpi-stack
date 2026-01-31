@@ -1,16 +1,18 @@
 #!/bin/bash
 
-# Skills Repository - Auto-sync to Claude Code and Codex
+# Skills Repository - Auto-sync to Claude Code, Codex, and Copilot CLI
 # Usage:
-#   ./install.sh           - Copy to both ~/.claude/skills and ~/.codex/skills
+#   ./install.sh           - Copy to ~/.claude/skills, ~/.codex/skills, and ~/.copilot/skills
 #   ./install.sh claude    - Copy to ~/.claude/skills only
 #   ./install.sh codex     - Copy to ~/.codex/skills only
+#   ./install.sh copilot   - Copy to ~/.copilot/skills only
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_SKILLS="$HOME/.claude/skills"
 CODEX_SKILLS="$HOME/.codex/skills"
+COPILOT_SKILLS="$HOME/.copilot/skills"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -36,7 +38,8 @@ sync_skills() {
         if [[ "$skill_name" != .* ]] && [[ -f "$skill_dir/SKILL.md" ]]; then
             echo "  → $skill_name"
             rm -rf "$dest/$skill_name"
-            cp -r "$skill_dir" "$dest/"
+            # Use skill_name to copy the directory itself, not just contents
+            cp -r "$SCRIPT_DIR/$skill_name" "$dest/"
         fi
     done
 
@@ -182,6 +185,9 @@ case "${1:-all}" in
     codex)
         sync_skills "$CODEX_SKILLS" "Codex"
         ;;
+    copilot)
+        sync_skills "$COPILOT_SKILLS" "Copilot CLI"
+        ;;
     hooks)
         sync_hooks
         echo ""
@@ -198,6 +204,8 @@ case "${1:-all}" in
         echo ""
         sync_skills "$CODEX_SKILLS" "Codex"
         echo ""
+        sync_skills "$COPILOT_SKILLS" "Copilot CLI"
+        echo ""
         sync_hooks
         echo ""
         sync_templates
@@ -206,13 +214,14 @@ case "${1:-all}" in
         echo ""
         setup_aliases
         echo ""
-        echo -e "${GREEN}✓ All skills, hooks, templates, aliases, and native hooks synced!${NC}"
+        echo -e "${GREEN}✓ All skills synced to Claude Code, Codex, and Copilot CLI!${NC}"
         ;;
     *)
-        echo "Usage: $0 [claude|codex|hooks|templates|aliases|all]"
+        echo "Usage: $0 [claude|codex|copilot|hooks|templates|aliases|all]"
         echo ""
         echo "  claude    - Sync to ~/.claude/skills (includes hooks, templates, aliases & native hooks)"
         echo "  codex     - Sync to ~/.codex/skills only"
+        echo "  copilot   - Sync to ~/.copilot/skills only"
         echo "  hooks     - Sync hooks to ~/.claude/ only (includes native hooks)"
         echo "  templates - Sync templates (sessions) to ~/.claude/ only"
         echo "  aliases   - Setup shell aliases (rpi-tracker, rpi-tracker-list, rpi-status)"

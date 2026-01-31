@@ -1,6 +1,6 @@
 # RPI Stack
 
-Research-Plan-Implement workflow system for Claude Code with session tracking, quality gates, and automatic context preservation.
+Research-Plan-Implement workflow system for Claude Code, Codex CLI, and GitHub Copilot CLI with session tracking, quality gates, and automatic context preservation.
 
 ---
 
@@ -221,6 +221,23 @@ Without hookify:
 
 No plugins required. Hooks are Claude Code specific.
 
+### For GitHub Copilot CLI Users
+
+Skills are loaded via `/skills` command:
+
+```bash
+# In Copilot CLI, list available skills
+/skills list
+
+# Add user-level skill
+/skills add --user rpi
+
+# Use skills by invoking in prompts
+# Example: "use the /rpi skill for KB-1234"
+```
+
+Note: Hookify and native hooks are Claude Code specific. In Copilot CLI, skills work as standalone workflow guides.
+
 ---
 
 ## Quick Start
@@ -242,7 +259,7 @@ cat ~/.claude/settings.json | jq '.hooks'  # Should show PreCompact/SessionEnd
 ```
 
 **What `./install.sh` does:**
-1. Syncs skills to `~/.claude/skills/`
+1. Syncs skills to `~/.claude/skills/`, `~/.codex/skills/`, and `~/.copilot/skills/`
 2. Syncs hookify hooks to `~/.claude/`
 3. Initializes `~/.claude/sessions/`
 4. Configures native hooks in `~/.claude/settings.json`
@@ -316,9 +333,10 @@ Action: Block and remind to fix P0 first
 
 ### Makefile
 ```bash
-make install        # Sync to both ~/.claude/skills and ~/.codex/skills
+make install        # Sync to ~/.claude/skills, ~/.codex/skills, and ~/.copilot/skills
 make claude         # Claude Code only
 make codex          # Codex CLI only
+make copilot        # Copilot CLI only
 make tracker        # Show active session
 make tracker-list   # List all sessions
 make status         # Quick one-liner

@@ -129,6 +129,8 @@ For each task in dependency order:
 3. No underengineering - all acceptance criteria met
 4. Run lint after significant changes
 5. Test as you go
+6. Verify library behavior from docs/source when using custom configs
+7. Define constants ONCE, reference everywhere (no hardcoded duplicates)
 ```
 
 ### 2.3 Pattern Compliance
@@ -421,6 +423,8 @@ After each task:
 □ Follows AGENTS.md patterns
 □ Acceptance criteria met
 □ No unnecessary code added
+□ No hardcoded values that should reference constants
+□ Library behavior verified from docs (not assumed from research)
 ```
 
 ### 3.2 Feature Verification

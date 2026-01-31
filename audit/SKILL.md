@@ -79,6 +79,7 @@ Hallucination occurs when AI:
 | **Invented Edge Cases** | Edge cases not mentioned in PRD | Medium |
 | **Fabricated Context** | Technical context without evidence | High |
 | **Misquoted Requirements** | Altered wording from original | Medium |
+| **Research Carryover** | Using default/research values instead of custom implementation | Critical |
 
 ### Hallucination Checklist
 
@@ -102,6 +103,10 @@ For each claim/requirement/decision, verify:
   - Can be confirmed from codebase?
   - Based on documentation?
   - Standard practice?
+
+□ For custom configurations:
+  - Is implementation using its OWN defined constants?
+  - Or accidentally using defaults from research?
 ```
 
 ### Hallucination Scoring
