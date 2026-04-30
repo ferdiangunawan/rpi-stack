@@ -1,45 +1,23 @@
-    # Claude Code/Codex CLI/Copilot CLI Skills - RPI Framework
+# Claude Code/Codex CLI/Copilot CLI Skills - RPI Framework
 
 ## Overview
 
-This directory contains custom skills for the RPI (Research, Plan, Implement) methodology - a structured approach to software development that ensures quality through systematic validation.
+Lean Research-Plan-Implement methodology for structured, quality-gated software development.
 
 ## Agent Compatibility
 
-These skills are compatible with Claude Code, Codex CLI, and GitHub Copilot CLI.
-
 | Agent | Skills Directory | Output Directory | Invoke Method |
 |-------|------------------|------------------|---------------|
-| Claude Code | `~/.claude/skills` | `.claude/output` | `/skill-name` (slash commands) |
+| Claude Code | `~/.claude/skills` | `.claude/output` | `/skill-name` |
 | Codex CLI | `~/.codex/skills` | `.codex/output` | Skill name in prompt |
 | Copilot CLI | `~/.copilot/skills` | `.copilot/output` | `/skills` command |
 
+---
+
+## Workflow
+
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           RPI WORKFLOW                                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   INPUT              RESEARCH           AUDIT            PLAN               │
-│  ┌──────┐           ┌──────┐          ┌──────┐         ┌──────┐            │
-│  │ Jira │──────────▶│      │─────────▶│      │────────▶│      │            │
-│  │ PRD  │           │      │  PASS?   │      │  PASS?  │      │            │
-│  │Prompt│           │      │          │      │         │      │            │
-│  └──────┘           └──────┘          └──────┘         └──────┘            │
-│                         │                                  │                │
-│                         ▼                                  ▼                │
-│                    research.md                         plan.md              │
-│                                                                             │
-│                     AUDIT             IMPLEMENT         REVIEW              │
-│                    ┌──────┐          ┌──────┐         ┌──────┐             │
-│               ────▶│      │─────────▶│      │────────▶│      │             │
-│                    │      │  PASS?   │      │         │      │             │
-│                    │      │          │      │         │      │             │
-│                    └──────┘          └──────┘         └──────┘             │
-│                                          │                │                 │
-│                                          ▼                ▼                 │
-│                                       CODE            APPROVED              │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+Input → Research → Audit → Plan → Audit → Approve → Implement → Code Review
 ```
 
 ---
@@ -50,198 +28,108 @@ These skills are compatible with Claude Code, Codex CLI, and GitHub Copilot CLI.
 |-------|---------|-------------|
 | **RPI** | `/rpi` | Full workflow orchestrator |
 | **Research** | `/research` | Gather context and assess confidence |
-| **Audit** | `/audit` | Validate against over/under/hallucination |
+| **Audit** | `/audit` | Validate research or plan (qualitative PASS/WARN/FAIL) |
 | **Plan** | `/plan` | Create detailed implementation plan |
-| **Implement** | `/implement` | Execute plan with tracking |
-| **Code Review** | `/code-review` | Review code with P0/P1/P2 severity |
+| **Implement** | `/implement` | Execute plan task by task |
+| **Code Review** | `/code-review` | Review code: correctness, security, performance, patterns |
 
 ---
 
 ## Quick Start
 
-### Full RPI Workflow
-
-Claude Code uses slash commands; Codex CLI and Copilot CLI can use skill names in prompts or the `/skills` command.
-
 ```bash
-# From Jira issue
+# Full RPI workflow from Jira ticket
 /rpi KB-1234
 
-# From Confluence PRD
+# Full RPI workflow from PRD URL
 /rpi https://kickavenue.atlassian.net/wiki/spaces/DEV/pages/123456
 
-# From direct requirements
+# Full RPI workflow from direct requirements
 /rpi Add feature to export user data as CSV
-```
 
-### Individual Skills
-
-Claude Code uses slash commands; Codex CLI and Copilot CLI use skill names in prompts.
-
-```bash
-# Research only
+# Individual skills
 /research KB-1234
-
-# Audit a document
 /audit research
 /audit plan
-
-# Create plan from research
 /plan
-
-# Implement from plan
 /implement
-
-# Code review
 /code-review
-/code-review path/to/file.dart
 ```
 
 ---
 
 ## Output Files
 
-All RPI outputs are saved to OUTPUT_DIR:
-
 ```
 OUTPUT_DIR/
-├── research-{feature}.md    # Research findings
-├── plan-{feature}.md        # Implementation plan
-├── audit-{feature}.md       # Audit reports
-└── review-{feature}.md      # Code review reports
+├── research-{feature}.md         # Research findings
+├── audit-research-{feature}.md   # Research audit report
+├── plan-{feature}.md             # Implementation plan
+├── audit-plan-{feature}.md       # Plan audit report
+└── review-{feature}.md           # Code review report
 ```
 
 ---
 
 ## Quality Gates
 
-### Gate 1: Research Validation
-- Confidence Score ≥ 60%
-- Hallucination Score ≤ 20%
-- Coverage ≥ 80%
+### Gate 1: Research Audit
+- No phantom requirements (invented without basis)
+- No major unresolved open questions
+- Confidence high enough to plan
 
-### Gate 2: Plan Validation
-- All requirements traced to tasks
-- No architectural violations
-- Plan Score ≥ 70%
+### Gate 2: Plan Audit
+- Every requirement traced to a task
+- No overengineering or underengineering
+- Follows AGENTS.md patterns
 
-### Gate 3: Implementation Validation
-- All tasks completed
-- flutter analyze passes
-- Code review approved
+### Gate 3: Code Review
+- P0 issues: **must be zero** before completion
+- P1 issues: should fix before merge
+- P2 issues: optional improvements
 
 ---
 
-## Severity Levels
+## Hooks (Behavioral Guards)
 
-### Audit Scores
-- **Hallucination**: Inventing requirements (target: ≤20%)
-- **Overengineering**: Adding unnecessary complexity (target: ≤15%)
-- **Underengineering**: Missing requirements (target: ≤15%)
-- **Balance**: Sweet spot between over/under (target: ≥70%)
-
-### Code Review
-- **P0 (Critical)**: Must fix - security, crashes, data loss
-- **P1 (Important)**: Should fix - bugs, performance, patterns
-- **P2 (Nice-to-have)**: Consider - style, docs, minor improvements
+| Hook | Purpose |
+|------|---------|
+| `rpi-audit-before-implement` | Blocks `/implement` if plan audit hasn't passed |
+| `rpi-p0-blocker` | Blocks completion when P0 issues are unresolved |
 
 ---
 
 ## File Structure
 
-Each skill is organized in its own subfolder with a `SKILL.md` file:
-
 ```
 SKILLS_DIR/
-├── README.md               # This file
-├── audit/
-│   └── SKILL.md            # Audit skill definition
-├── code-review/
-│   └── SKILL.md            # Code review skill definition
-├── implement/
-│   └── SKILL.md            # Implementation skill definition
-├── plan/
-│   └── SKILL.md            # Planning skill definition
-├── research/
-│   └── SKILL.md            # Research skill definition
-└── rpi/
-    └── SKILL.md            # RPI orchestrator skill definition
+├── SKILL.md              # This file
+├── README.md             # Full documentation
+├── rpi/SKILL.md          # Orchestrator
+├── research/SKILL.md     # Research skill
+├── audit/SKILL.md        # Audit skill
+├── plan/SKILL.md         # Plan skill
+├── implement/SKILL.md    # Implement skill
+├── code-review/SKILL.md  # Code review skill (includes security + performance)
+└── hooks/
+    ├── hookify.rpi-audit-before-implement.local.md
+    └── hookify.rpi-p0-blocker.local.md
 ```
-
----
-
-## Integration with AGENTS.md
-
-All skills are designed to work with project-specific `AGENTS.md`:
-
-1. **Research** reads AGENTS.md to understand project patterns
-2. **Audit** validates against AGENTS.md conventions
-3. **Plan** uses AGENTS.md patterns for task templates
-4. **Implement** follows AGENTS.md strictly
-5. **Code Review** checks AGENTS.md compliance
 
 ---
 
 ## Best Practices
 
-### When to Use Full RPI
-- New features with unclear scope
-- Complex multi-file changes
-- Features from Jira/Confluence PRD
-
-### When to Use Individual Skills
-- `/research` - When exploring feasibility
-- `/audit` - When validating existing plans
-- `/plan` - When scope is already clear
-- `/implement` - When plan exists
-- `/code-review` - After any significant code changes
-
-### Tips
-1. Always run full RPI for Jira tickets
-2. Use audit between research and plan
-3. Don't skip audit gates
-4. Review code before marking complete
-5. Keep outputs for documentation
+- Always run full `/rpi` for Jira tickets or complex features
+- Use `/audit` between research and plan, and between plan and implement
+- Never skip the audit gates
+- `/code-review` runs automatically at end of `/implement` — check P0s before merging
+- Output files serve as the resume state — if context is lost, re-read output files
 
 ---
 
 ## Adding New Skills
 
-To add a new skill:
-
-1. Create a subfolder: `SKILLS_DIR/{skill-name}/`
-2. Create `SKILL.md` inside the subfolder with:
-   - Skill metadata (name, description, trigger)
-   - Skill logic and instructions
-   - Output format
-3. Restart Claude Code or Codex CLI to load the new skill
-
-Example structure:
-```
-SKILLS_DIR/my-skill/
-└── SKILL.md
-```
-
----
-
-## Troubleshooting
-
-### "Low Confidence Score"
-- Missing information in PRD
-- Run `/research` with more specific query
-- Ask stakeholder for clarification
-
-### "Audit Failed"
-- Review specific findings
-- Address P0/P1 issues
-- Re-run audit after fixes
-
-### "Pattern Violation"
-- Check AGENTS.md for correct pattern
-- Look at similar existing code
-- Follow project conventions exactly
-
-### "Skill Not Found"
-- Ensure skill folder exists: `SKILLS_DIR/{skill-name}/`
-- Ensure `SKILL.md` file exists inside the folder
-- Restart Claude Code or Codex CLI to reload skills
+1. Create `SKILLS_DIR/{skill-name}/SKILL.md`
+2. Add skill metadata (name, description), logic, and output format
+3. Restart the agent to load the new skill
