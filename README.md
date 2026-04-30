@@ -68,13 +68,16 @@ Input (Jira / PRD / Prompt)
 
 ## Usage
 
+> **Always use Autopilot mode (not Plan mode) with RPI commands.**  
+> `/rpi` already contains its own research + planning phases. Running it inside the AI's built-in Plan mode causes the agent to plan about planning — they conflict. Use Plan mode only for freeform architectural questions outside of the RPI workflow.
+
 ```bash
-# Full workflow
+# Full workflow — run in Autopilot mode
 /rpi KB-1234
 /rpi https://confluence.example.com/pages/123
 /rpi "Add CSV export for user orders"
 
-# Individual skills
+# Individual skills (also Autopilot)
 /research KB-1234     # Research only
 /audit research       # Audit the research output
 /audit plan           # Audit the plan output
@@ -82,6 +85,23 @@ Input (Jira / PRD / Prompt)
 /implement            # Execute plan
 /code-review          # Review all changes
 ```
+
+### The One Human Gate
+
+`/rpi` is fully autonomous except for one mandatory pause: after the plan is audited, the AI presents the task list and waits for your explicit approval before writing any code. Review, adjust if needed, then say "proceed".
+
+### Mode Reference
+
+| Command | Mode | Notes |
+|---------|------|-------|
+| `/rpi` | **Autopilot** | Full autonomous execution |
+| `/research` | **Autopilot** | Produces research-{feature}.md |
+| `/audit` | **Autopilot** | Emits PASS/WARN/FAIL — read the result |
+| `/plan` | **Autopilot** | Produces plan-{feature}.md (≠ AI plan mode) |
+| `/implement` | **Autopilot** | Blocked by hook if audit hasn't passed |
+| `/code-review` | **Autopilot** | Produces review-{feature}.md |
+
+> **Note:** `/plan` (the RPI skill) produces a markdown plan document. This is **not** the same as the AI's built-in Plan Mode (`[[PLAN]]` prefix in Copilot CLI). Don't mix them up.
 
 ---
 
