@@ -8,52 +8,26 @@ Reference documentation for Claude Code hook events used by RPI Stack.
 
 | Event | Description | RPI Usage |
 |-------|-------------|-----------|
-| `PreToolUse` | Before tool execution | - |
+| `PreToolUse` | Before tool execution | **P0 blocker gate** |
 | `PostToolUse` | After tool execution | - |
-| `UserPromptSubmit` | When user submits a prompt | - |
+| `UserPromptSubmit` | When user submits a prompt | **Audit-before-implement gate** |
 | `SessionStart` | Session initialization | - |
-| `SessionEnd` | Session cleanup | **Auto-save RPI session** |
-| `PreCompact` | Before context compaction | **Auto-save RPI session** |
+| `SessionEnd` | Session cleanup | - |
+| `PreCompact` | Before context compaction | - |
 | `Stop` | When main agent finishes | - |
 | `SubagentStop` | When a subagent finishes | - |
 
 ---
 
-## RPI Native Hooks
+## Active RPI Hooks
 
-Configured automatically by `./install.sh`:
+Two behavioral guards are active (configured via `./install.sh`):
 
-### PreCompact Hook
-Saves RPI session state before Claude Code compacts context (prevents data loss).
+### `hookify.rpi-audit-before-implement` (UserPromptSubmit)
+Blocks `/implement` if the plan audit hasn't passed. Ensures `/audit` runs and passes before code is written.
 
-```json
-{
-  "hooks": {
-    "PreCompact": [{
-      "hooks": [{
-        "type": "command",
-        "command": "~/.claude/skills/scripts/rpi-session-save.sh"
-      }]
-    }]
-  }
-}
-```
-
-### SessionEnd Hook
-Saves RPI session state when Claude Code session ends.
-
-```json
-{
-  "hooks": {
-    "SessionEnd": [{
-      "hooks": [{
-        "type": "command",
-        "command": "~/.claude/skills/scripts/rpi-session-save.sh"
-      }]
-    }]
-  }
-}
-```
+### `hookify.rpi-p0-blocker` (PreToolUse)
+Blocks marking any task complete when P0 issues exist in the current audit or code review output.
 
 ---
 
@@ -65,8 +39,8 @@ Hooks receive JSON input via stdin:
 {
   "session_id": "abc123",
   "transcript_path": "~/.claude/projects/.../conversation.jsonl",
-  "hook_event_name": "PreCompact",
-  "reason": "auto"
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "/implement"
 }
 ```
 
@@ -74,7 +48,7 @@ Hooks receive JSON input via stdin:
 
 ## Built-in Resume (Claude Code)
 
-Claude Code has native resume functionality (separate from RPI sessions):
+Claude Code has native resume functionality:
 
 | Command | Description |
 |---------|-------------|
@@ -82,35 +56,14 @@ Claude Code has native resume functionality (separate from RPI sessions):
 | `claude --resume` | Pick from previous sessions |
 | `/rename <name>` | Name session for easy finding |
 
----
-
-## RPI Session Resume
-
-RPI has its own session tracking at `~/.claude/sessions/`:
-
-```bash
-# View sessions
-rpi-tracker-list
-
-# Resume in Claude Code
-/rpi --session resume {session-id}
-/rpi --session resume              # Resume active
-```
+**RPI resume:** Output files in OUTPUT_DIR are the source of truth. Read `research-{feature}.md` and `plan-{feature}.md` to resume at the right step — no separate session tracking needed.
 
 ---
 
 ## Verification
 
-Check if native hooks are configured:
+Check if hooks are configured:
 
 ```bash
 cat ~/.claude/settings.json | jq '.hooks'
-```
-
-Expected output:
-```json
-{
-  "PreCompact": [...],
-  "SessionEnd": [...]
-}
 ```

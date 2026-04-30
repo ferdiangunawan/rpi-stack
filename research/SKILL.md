@@ -1,6 +1,6 @@
 ---
 name: research
-description: Use when needing to understand requirements before implementation. Gathers context from Jira, Confluence, codebase, and docs. Produces research document with confidence scoring.
+description: Use when needing to understand requirements before implementation. Gathers context from Jira, Confluence, codebase, and docs. Produces research document with confidence assessment.
 ---
 
 # Research Skill
@@ -9,205 +9,103 @@ Conducts thorough research on requirements and codebase before implementation.
 
 ## When to Use
 
-Use this skill when:
-- Need to understand a Jira ticket before planning
+- Need to understand a Jira ticket or PRD before planning
 - Exploring feasibility of a feature
 - Gathering context about existing code patterns
-- Assessing complexity of a task
 
 ## Agent Compatibility
 
-- AskUserQuestion: use the tool in Claude Code; in Codex CLI, ask the user directly and record the answer.
-- Subagents/Task tool: use if available; otherwise run the searches yourself (parallel if possible).
+- AskUserQuestion: use the tool in Claude Code; in Codex CLI, ask the user directly.
+- Subagents/Task tool: use if available; otherwise run searches yourself in parallel.
 - OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
 
-## Instructions
+---
 
-### Phase 1: Input Gathering
+## Phase 1: Input Gathering
 
 **From Jira:**
 ```
 Use mcp__atlassian__getJiraIssue to extract:
-- Summary (title)
-- Description (requirements)
-- Acceptance Criteria
-- Linked Confluence pages
+- Summary, Description, Acceptance Criteria, linked Confluence pages
 ```
 
-**From Codebase (Using Parallel Exploration):**
+**From Codebase (run in parallel when possible):**
 ```
-Use subagents (Task tool) if available; otherwise run the following searches yourself (parallel if possible):
+Search 1: Similar features / patterns matching {feature keywords}
+Search 2: Files likely affected by this feature (dependencies, related components)
+Search 3 (complex features): Architecture for {related domain} — data flow, state management
+```
 
-Agent 1 (quick thoroughness):
-  "Search for similar features/patterns matching {feature keywords}"
-
-Agent 2 (medium thoroughness):
-  "Find all files that might be affected by {feature}, including
-   dependencies and related components"
-
-Agent 3 (thorough - optional for complex features):
-  "Understand the existing architecture for {related domain},
-   including data flow and state management patterns"
-
-After agents complete:
-1. Synthesize findings from all agents
+After gathering:
+1. Synthesize findings
 2. Read AGENTS.md for project conventions
 3. Identify existing components to reuse
-```
 
-### Phase 2: Requirement Analysis
+---
+
+## Phase 2: Requirement Analysis
 
 For each requirement, identify:
-- Type: functional/non-functional/constraint
-- Priority: must-have/should-have/nice-to-have
-- Complexity: low/medium/high
-- Affected layers: presentation/application/domain/data
-- Dependencies
-- Risks
+- Type: functional / non-functional / constraint
+- Priority: must-have / should-have / nice-to-have
+- Complexity: low / medium / high
+- Affected layers: presentation / application / domain / data
 
-### Phase 3: Codebase Mapping
+---
+
+## Phase 3: Codebase Mapping
 
 Map requirements to existing code:
 - Similar features to reference
 - Reusable components (widgets, services)
-- API endpoints (existing vs new needed)
-- State management patterns
+- API endpoints (existing vs. new needed)
+- State management patterns in use
 
-### Phase 4: Gap Analysis
+---
+
+## Phase 4: Gap Analysis & Clarifications
 
 Identify:
-- New code needed (screens, controllers, models, services)
-- API gaps
-- Missing information / unclear requirements
-- Technical unknowns
+- Missing information or unclear requirements
+- Edge cases with no specified behavior
+- Technical unknowns or multiple valid approaches
 
-### Phase 4.5: MANDATORY Clarification Gate
+**If there are ANY open questions, list them ALL and ask in a single batch before writing the output.**
 
-**CRITICAL: This phase is BLOCKING. Do not proceed to Phase 5 until all questions are answered.**
+> Do NOT write open questions and then answer them yourself with recommendations.
+> Do NOT proceed with assumptions — ask.
+> Document the user's answer before continuing.
 
-When ANY of these are identified in Phase 4:
-- Missing information
-- Unclear requirements
-- Edge cases without explicit behavior
-- Technical unknowns
-- Multiple valid interpretations
-
----
-
-#### R-Checkpoints (Research Questions)
-
-**R1: Requirement Ambiguity**
-When a requirement has multiple interpretations:
-
+Example:
 ```
-AskUserQuestion(
-  questions: [
-    {
-      question: "Requirement '{X}' could mean '{A}' or '{B}'. Which interpretation is correct?",
-      header: "Requirement",
-      options: [
-        { label: "Interpretation A", description: "{details of A}" },
-        { label: "Interpretation B", description: "{details of B}" },
-        { label: "Neither", description: "Let me explain..." }
-      ],
-      multiSelect: false
-    }
-  ]
-)
-```
+Before I write the research document, I have a few questions:
 
-**R2: Missing Information**
-When the PRD/Jira doesn't specify something needed:
-
-```
-AskUserQuestion(
-  questions: [
-    {
-      question: "The PRD doesn't specify '{X}'. What should the behavior be?",
-      header: "Missing Spec",
-      options: [
-        { label: "Option A", description: "{behavior A}" },
-        { label: "Option B", description: "{behavior B}" },
-        { label: "Skip for now", description: "Mark as open question for stakeholder" }
-      ],
-      multiSelect: false
-    }
-  ]
-)
-```
-
-**R3: Technical Unknowns**
-When technical feasibility or approach is uncertain:
-
-```
-AskUserQuestion(
-  questions: [
-    {
-      question: "Implementing '{X}' requires choosing between '{A}' and '{B}'. Which approach?",
-      header: "Technical",
-      options: [
-        { label: "Approach A", description: "Pros: X, Cons: Y" },
-        { label: "Approach B", description: "Pros: Y, Cons: Z" },
-        { label: "Need more research", description: "Defer decision, gather more info" }
-      ],
-      multiSelect: false
-    }
-  ]
-)
+1. [Requirement ambiguity] "{X}" could mean A or B — which is correct?
+2. [Missing spec] The PRD doesn't say what should happen when {Y}. Options: A / B / skip for now?
+3. [Technical choice] Implementing {Z} could use approach A (pros: X, cons: Y) or B (pros: Y, cons: X) — preference?
 ```
 
 ---
 
-**Rules:**
-1. NEVER assume behavior - ASK
-2. NEVER write "Recommendation: X" without asking first
-3. NEVER mark "Open Questions" without immediately asking them
-4. Document user's answer in research output
-5. Each R-checkpoint MUST be resolved before Phase 5
+## Phase 5: Confidence Assessment
 
-**Research Phase Complete Criteria:**
-```
-□ All R1 checkpoints resolved (no ambiguous requirements)
-□ All R2 checkpoints resolved (no missing info without explicit skip)
-□ All R3 checkpoints resolved (technical approach decided)
-```
+Rate confidence across dimensions (qualitative):
 
-**Anti-Pattern:**
-```markdown
-## Open Questions
-1. What should display when X?
-   - Recommendation: Show "–" ← WRONG! Should have asked user!
-```
+| Dimension | Confidence | Notes |
+|-----------|------------|-------|
+| Requirement Clarity | High / Medium / Low | |
+| Codebase Understanding | High / Medium / Low | |
+| Technical Feasibility | High / Medium / Low | |
+| Scope Definition | High / Medium / Low | |
+| Risk Identification | High / Medium / Low | |
 
-**Correct Pattern:**
-```markdown
-## Clarified with User
-1. What should display when X? [R2]
-   - User confirmed: Show "–" (via AskUserQuestion)
-```
+**Overall:** High / Medium / Low — and whether to PROCEED / CLARIFY FURTHER / HALT.
 
-### Phase 5: Confidence Scoring
+---
 
-Calculate confidence across dimensions:
+## Output
 
-| Dimension | Weight | Description |
-|-----------|--------|-------------|
-| Requirement Clarity | 25% | How clear are requirements? |
-| Codebase Understanding | 25% | Do I understand patterns? |
-| Technical Feasibility | 20% | Can this be implemented? |
-| Scope Definition | 15% | Are boundaries clear? |
-| Risk Identification | 15% | Are risks understood? |
-
-**Overall Confidence = Weighted Sum**
-
-Thresholds:
-- ≥80%: High confidence, proceed
-- 60-79%: Medium, clarify unknowns
-- <60%: Low, request more info
-
-### Output
-
-Create `OUTPUT_DIR/research-{feature}.md` with:
+Create `OUTPUT_DIR/research-{feature}.md`:
 
 ```markdown
 # Research: {Feature Name}
@@ -215,10 +113,10 @@ Create `OUTPUT_DIR/research-{feature}.md` with:
 ## Metadata
 - Date: {date}
 - Source: {Jira/Confluence/Prompt}
-- Confidence Score: {X}%
+- Confidence: {High / Medium / Low}
 
 ## Requirements Summary
-{Parsed requirements with IDs}
+{Parsed requirements with IDs: R1, R2, R3...}
 
 ## Codebase Analysis
 {Related code, patterns to follow, reusable components}
@@ -226,43 +124,15 @@ Create `OUTPUT_DIR/research-{feature}.md` with:
 ## Technical Analysis
 {Architecture impact, new code required, API needs}
 
+## Clarified Questions
+{Questions asked and user answers — or "None"}
+
 ## Risk Assessment
 {Risks with likelihood/impact/mitigation}
 
 ## Confidence Assessment
-{Scores per dimension, blockers, questions}
+{Per-dimension table, overall confidence, recommendation}
 
 ## Recommendation
-{PROCEED / CLARIFY / HALT}
-```
-
----
-
-## Progress Tracking (MANDATORY when called from RPI)
-
-**If this skill is invoked as part of an RPI workflow, you MUST update progress:**
-
-### On Research Start
-```bash
-~/.claude/skills/scripts/rpi-progress.sh --phase research --status in_progress --last "Starting research" --next "Complete research analysis"
-```
-
-### On Research Complete (before audit)
-```bash
-~/.claude/skills/scripts/rpi-progress.sh --phase research --status complete --last "Research complete" --next "Research audit"
-```
-
-### Progress Values
-- Research started: 5%
-- Research complete: 10%
-- Research audit pass: 15%
-
----
-
-## Example
-
-
-```
-User: Research KB-1234 before we plan
-Agent: [Fetches Jira, searches codebase, produces research doc]
+{PROCEED / CLARIFY FURTHER / HALT}
 ```
