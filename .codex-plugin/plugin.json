@@ -1,7 +1,7 @@
 {
   "name": "rpi-stack",
   "version": "1.0.0",
-  "description": "Agent-specific Research-Plan-Implement workflow skills for Claude Code and Codex.",
+  "description": "Lean Research-Plan-Implement workflow skills for Claude Code and Codex.",
   "author": {
     "name": "Kick Avenue",
     "email": "",
@@ -19,11 +19,11 @@
     "implementation",
     "code-review"
   ],
-  "skills": "./skills/codex/",
+  "skills": "./",
   "interface": {
     "displayName": "RPI Stack",
     "shortDescription": "Research, plan, implement, audit, and review coding work in Codex.",
-    "longDescription": "RPI Stack provides separate native skill distributions for Claude Code and Codex. Claude gets slash-command workflow, hooks, session scripts, and aliases. Codex gets Codex-native skills, .codex output/session paths, update_plan workflow, and optional framework profiles.",
+    "longDescription": "RPI Stack provides a lean 6-skill Research-Plan-Implement workflow for Claude Code and Codex. Claude installs slash-command-friendly skills plus hookify guards; Codex installs the same skill stack with plugin metadata for Codex discovery.",
     "developerName": "Kick Avenue",
     "category": "Productivity",
     "capabilities": [
