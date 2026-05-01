@@ -1,166 +1,125 @@
 # RPI Stack
 
-Lean Research-Plan-Implement workflow system for Claude Code, Codex CLI, and GitHub Copilot CLI. Quality-gated, context-preserving, and focused on keeping the LLM productive — not on ceremony.
+RPI Stack packages Research-Plan-Implement workflow skills for both Claude Code and Codex. Each agent gets its own native skill payload, paths, tools, and workflow conventions instead of sharing a lowest-common-denominator prompt.
 
----
+## What Gets Installed
 
-## Design Principles
+`./install.sh` installs to computer-level agent directories:
 
-1. **Linear and clear** — the workflow is a straight line; no branching machinery
-2. **Low ceremony** — skills are focused instructions, not process frameworks
-3. **Qualitative over numeric** — quality gates use clear pass/fail criteria, not invented percentages
-4. **Outputs as state** — output files are the source of truth; no separate session JSON
-5. **Ask once** — clarification questions are batched and asked in a single step
+| Agent | Source in this repo | Destination | Agent-specific behavior |
+|-------|---------------------|-------------|-------------------------|
+| Claude Code | `skills/claude/` | `~/.claude/skills` | Slash-command workflow, Claude session scripts, hookify files, native hooks, shell aliases. |
+| Codex | `skills/codex/` | `~/.codex/skills` | Codex-native workflow, `.codex/output`, `.codex/sessions`, `update_plan`, framework profiles. |
 
----
+## Install
 
-## Architecture
-
-```
-Input (Jira / PRD / Prompt)
-         │
-         ▼
-   [RESEARCH]  ─── Ask all clarifying questions at once (if any)
-         │          Output: research-{feature}.md
-         ▼
-  [AUDIT RESEARCH]  ─── PASS / WARN / FAIL (qualitative)
-         │ FAIL → revise and re-run
-         ▼
-    [PLAN]  ─── Ask all open questions at once (if any)
-         │       Output: plan-{feature}.md
-         ▼
-  [AUDIT PLAN]  ─── All requirements traced? Balanced? Pattern-compliant?
-         │ FAIL → revise and re-run
-         ▼
- [USER APPROVAL]  ─── Present plan summary, wait for explicit yes
-         │
-         ▼
-  [IMPLEMENT]  ─── Task by task, verify each, lint after each
-         │          Output: code changes
-         ▼
- [CODE REVIEW]  ─── Correctness + Security + Performance (P0/P1/P2)
-                    Output: review-{feature}.md
+```bash
+git clone <this-repo-url>
+cd rpi-stack
+./install.sh
 ```
 
----
+Install only one agent:
+
+```bash
+./install.sh claude
+./install.sh codex
+```
+
+Useful options:
+
+```bash
+./install.sh --dry-run
+./install.sh --clean
+./install.sh --no-claude-tools
+./install.sh --claude-dest /custom/claude/skills
+./install.sh --codex-dest /custom/codex/skills
+```
+
+Restart Claude Code or Codex if the agent was already running.
 
 ## Skills
 
+Both distributions include:
+
 | Skill | Purpose |
 |-------|---------|
-| `/rpi` | Full orchestrator — runs all skills in sequence |
-| `/research` | Gather context; ask clarifying questions as a batch |
-| `/audit` | Qualitative gate: PASS/WARN/FAIL for hallucination, scope, traceability |
-| `/plan` | Task breakdown with dependencies; ask open questions as a batch |
-| `/implement` | Task-by-task execution following AGENTS.md |
-| `/code-review` | Final review: correctness, security, performance, patterns |
+| `rpi` | Full Research-Plan-Implement orchestrator. |
+| `research` | Gather requirements and codebase context. |
+| `audit` | Validate research/plans/code against hallucination, overengineering, underengineering, and traceability. |
+| `plan` | Produce an implementation-ready plan. |
+| `implement` | Execute the plan with progress tracking and validation. |
+| `code-review` | Review changes using P0/P1/P2 severity. |
+| `audit-security` | Focused security review. |
+| `audit-performance` | Focused performance review. |
 
----
+## Claude Code Usage
 
-## Hooks (Behavioral Guards)
+Use the Claude-native slash-command style:
 
-| Hook | Trigger | Purpose |
-|------|---------|---------|
-| `rpi-audit-before-implement` | `/implement` without passing plan audit | Enforces plan audit gate |
-| `rpi-p0-blocker` | Marking complete with P0 findings | Prevents merging critical issues |
-
----
-
-## Usage
-
-> **Always use Autopilot mode (not Plan mode) with RPI commands.**  
-> `/rpi` already contains its own research + planning phases. Running it inside the AI's built-in Plan mode causes the agent to plan about planning — they conflict. Use Plan mode only for freeform architectural questions outside of the RPI workflow.
-
-```bash
-# Full workflow — run in Autopilot mode
+```text
 /rpi KB-1234
-/rpi https://confluence.example.com/pages/123
-/rpi "Add CSV export for user orders"
-
-# Individual skills (also Autopilot)
-/research KB-1234     # Research only
-/audit research       # Audit the research output
-/audit plan           # Audit the plan output
-/plan                 # Create plan from research
-/implement            # Execute plan
-/code-review          # Review all changes
+/research KB-1234
+/audit plan
+/plan
+/implement
+/code-review
 ```
 
-### The One Human Gate
+Claude tools installed by default:
 
-`/rpi` is fully autonomous except for one mandatory pause: after the plan is audited, the AI presents the task list and waits for your explicit approval before writing any code. Review, adjust if needed, then say "proceed".
+- Hookify files copied to `~/.claude/`.
+- Session template initialized under `~/.claude/sessions` when missing.
+- Native hooks added to `~/.claude/settings.json` when `jq` is available.
+- Shell aliases added for `rpi-tracker`, `rpi-tracker-list`, and `rpi-status`.
 
-### Mode Reference
+## Codex Usage
 
-| Command | Mode | Notes |
-|---------|------|-------|
-| `/rpi` | **Autopilot** | Full autonomous execution |
-| `/research` | **Autopilot** | Produces research-{feature}.md |
-| `/audit` | **Autopilot** | Emits PASS/WARN/FAIL — read the result |
-| `/plan` | **Autopilot** | Produces plan-{feature}.md (≠ AI plan mode) |
-| `/implement` | **Autopilot** | Blocked by hook if audit hasn't passed |
-| `/code-review` | **Autopilot** | Produces review-{feature}.md |
+Ask Codex to use the skill by name:
 
-> **Note:** `/plan` (the RPI skill) produces a markdown plan document. This is **not** the same as the AI's built-in Plan Mode (`[[PLAN]]` prefix in Copilot CLI). Don't mix them up.
+```text
+Use rpi to implement KB-1234
+Use research before changing checkout
+Use plan to create a migration-safe implementation plan
+Use code-review to review my current diff
+```
 
----
+Codex RPI supports three modes:
+
+| Mode | Use when |
+|------|----------|
+| `fast` | Small bug fixes, obvious refactors, low-risk UI/content changes. |
+| `standard` | Normal feature work and multi-file changes. |
+| `strict` | Auth, payments, migrations, data loss risk, security, broad architecture changes, unclear PRD/Jira. |
+
+Codex also includes optional framework profiles:
+
+- `skills/codex/rpi/references/profiles/flutter.md`
+- `skills/codex/rpi/references/profiles/frontend.md`
+- `skills/codex/rpi/references/profiles/backend.md`
+- `skills/codex/rpi/references/profiles/scripts.md`
 
 ## Output Files
 
-All outputs land in OUTPUT_DIR (`.claude/output`, `.codex/output`, or `.copilot/output`):
+Claude output defaults to:
 
-```
-OUTPUT_DIR/
-├── research-{feature}.md         # Research findings + confidence
-├── audit-research-{feature}.md   # Research quality gate report
-├── plan-{feature}.md             # Task breakdown + file inventory
-├── audit-plan-{feature}.md       # Plan quality gate report
-└── review-{feature}.md           # Code review report (P0/P1/P2)
+```text
+.claude/output/
 ```
 
-These files serve as the session state. To resume after context loss: read the output files and pick up at the right step.
+Codex output defaults to:
 
----
-
-## Quality Gates
-
-### Audit: Research
-- **Hallucination check**: No claims invented without basis in requirements
-- **Scope check**: Nothing excessive added, nothing critical missing
-- **Confidence check**: Enough is known to plan without major unknowns
-
-### Audit: Plan
-- **Traceability**: Every requirement maps to at least one task
-- **Scope balance**: No overengineering, no underengineering
-- **Pattern compliance**: Tasks follow AGENTS.md conventions
-
-### Code Review
-- **P0** (critical): Must fix before merge — security vulns, memory leaks, blocking I/O, crashes
-- **P1** (important): Should fix — logic errors, missing validation, pattern violations
-- **P2** (nice-to-have): Consider — style, minor perf, refactoring
-
----
-
-## Installation
-
-```bash
-# Copy skills to your agent's skills directory
-cp -r rpi research audit plan implement code-review ~/.claude/skills/
-cp -r hooks/* ~/.claude/hooks/
-
-# For Codex CLI
-cp -r rpi research audit plan implement code-review ~/.codex/skills/
-
-# For Copilot CLI
-cp -r rpi research audit plan implement code-review ~/.copilot/skills/
+```text
+.codex/output/
 ```
 
----
+Artifacts usually include:
 
-## Integration with AGENTS.md
+- `research-{feature}.md`
+- `plan-{feature}.md`
+- `audit-{feature}-{phase}.md`
+- `review-{feature}.md`
 
-All skills reference the project's `AGENTS.md`:
-1. **Research** reads AGENTS.md to understand existing patterns
-2. **Audit** checks plan compliance against AGENTS.md conventions
-3. **Implement** follows AGENTS.md patterns exactly — read before every new file
-4. **Code Review** checks AGENTS.md adherence in all changed files
+## Plugin Metadata
+
+`.codex-plugin/plugin.json` points Codex plugin discovery at `skills/codex/`. Claude support is installed by `install.sh` because Claude uses its own skill and hook directories.
