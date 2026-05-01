@@ -1,231 +1,308 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Skills Repository - Auto-sync to Claude Code, Codex, and Copilot CLI
+# RPI Stack installer for Claude Code and Codex.
 # Usage:
-#   ./install.sh           - Copy to ~/.claude/skills, ~/.codex/skills, and ~/.copilot/skills
-#   ./install.sh claude    - Copy to ~/.claude/skills only
-#   ./install.sh codex     - Copy to ~/.codex/skills only
-#   ./install.sh copilot   - Copy to ~/.copilot/skills only
+#   ./install.sh                    Install both Claude and Codex distributions
+#   ./install.sh claude             Install Claude distribution only
+#   ./install.sh codex              Install Codex distribution only
+#   ./install.sh --dry-run          Show actions without writing
+#   ./install.sh --clean            Remove installed RPI Stack skills
+#   ./install.sh --no-claude-tools  Skip Claude hooks/templates/aliases setup
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLAUDE_SKILLS="$HOME/.claude/skills"
-CODEX_SKILLS="$HOME/.codex/skills"
-COPILOT_SKILLS="$HOME/.copilot/skills"
+CLAUDE_SRC="$SCRIPT_DIR/skills/claude"
+CODEX_SRC="$SCRIPT_DIR/skills/codex"
+CLAUDE_DEST="$HOME/.claude/skills"
+CODEX_DEST="$HOME/.codex/skills"
+DRY_RUN=0
+CLEAN=0
+INSTALL_CLAUDE=1
+INSTALL_CODEX=1
+WITH_CLAUDE_TOOLS=1
 
-# Colors for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+SKILL_DIRS=(
+  rpi
+  research
+  audit
+  plan
+  implement
+  code-review
+  audit-security
+  audit-performance
+)
+
+usage() {
+  cat <<USAGE
+RPI Stack installer
+
+Usage:
+  ./install.sh                         Install Claude + Codex skills
+  ./install.sh claude                  Install Claude skills/tools only
+  ./install.sh codex                   Install Codex skills only
+  ./install.sh all                     Install Claude + Codex skills
+  ./install.sh --dry-run               Show what would be installed
+  ./install.sh --clean                 Remove installed RPI Stack skills
+  ./install.sh --claude-dest DIR       Override Claude skills directory
+  ./install.sh --codex-dest DIR        Override Codex skills directory
+  ./install.sh --no-claude-tools       Skip Claude hooks/templates/aliases setup
+  ./install.sh --help                  Show this help
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    all)
+      INSTALL_CLAUDE=1
+      INSTALL_CODEX=1
+      shift
+      ;;
+    claude)
+      INSTALL_CLAUDE=1
+      INSTALL_CODEX=0
+      shift
+      ;;
+    codex)
+      INSTALL_CLAUDE=0
+      INSTALL_CODEX=1
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    --clean)
+      CLEAN=1
+      shift
+      ;;
+    --claude-dest)
+      if [[ $# -lt 2 ]]; then
+        echo -e "${RED}Missing value for --claude-dest${NC}" >&2
+        exit 1
+      fi
+      CLAUDE_DEST="$2"
+      shift 2
+      ;;
+    --codex-dest|--dest)
+      if [[ $# -lt 2 ]]; then
+        echo -e "${RED}Missing value for $1${NC}" >&2
+        exit 1
+      fi
+      CODEX_DEST="$2"
+      shift 2
+      ;;
+    --no-claude-tools)
+      WITH_CLAUDE_TOOLS=0
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo -e "${RED}Unknown argument: $1${NC}" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+require_skill_sources() {
+  local src="$1"
+  local label="$2"
+  local missing=0
+
+  if [[ ! -f "$src/SKILL.md" ]]; then
+    echo -e "${RED}Missing $label root SKILL.md at $src/SKILL.md${NC}" >&2
+    missing=1
+  fi
+
+  for skill in "${SKILL_DIRS[@]}"; do
+    if [[ ! -f "$src/$skill/SKILL.md" ]]; then
+      echo -e "${RED}Missing $label skill: $src/$skill/SKILL.md${NC}" >&2
+      missing=1
+    fi
+  done
+
+  if [[ "$missing" -ne 0 ]]; then
+    exit 1
+  fi
+}
 
 sync_skills() {
-    local dest="$1"
-    local name="$2"
+  local src="$1"
+  local dest="$2"
+  local label="$3"
 
-    echo -e "${BLUE}Syncing to $dest...${NC}"
-    mkdir -p "$dest"
+  require_skill_sources "$src" "$label"
 
-    # Copy root SKILL.md if exists
-    if [[ -f "$SCRIPT_DIR/SKILL.md" ]]; then
-        cp -f "$SCRIPT_DIR/SKILL.md" "$dest/"
-    fi
+  echo -e "${BLUE}Installing $label skills to:${NC} $dest"
 
-    # Copy each skill directory (directories with SKILL.md)
-    for skill_dir in "$SCRIPT_DIR"/*/; do
-        skill_name=$(basename "$skill_dir")
-        # Skip hidden directories and non-skill directories
-        if [[ "$skill_name" != .* ]] && [[ -f "$skill_dir/SKILL.md" ]]; then
-            echo "  → $skill_name"
-            rm -rf "$dest/$skill_name"
-            # Use skill_name to copy the directory itself, not just contents
-            cp -r "$SCRIPT_DIR/$skill_name" "$dest/"
-        fi
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "Would create: $dest"
+    echo "Would copy: $src/SKILL.md -> $dest/SKILL.md"
+    for skill in "${SKILL_DIRS[@]}"; do
+      echo "Would copy: $src/$skill/ -> $dest/$skill/"
     done
-
-    # Copy scripts directory (utility scripts for RPI workflow)
-    if [[ -d "$SCRIPT_DIR/scripts" ]]; then
-        echo "  → scripts (CLI utilities)"
-        rm -rf "$dest/scripts"
-        cp -r "$SCRIPT_DIR/scripts" "$dest/"
-        chmod +x "$dest/scripts/"*.sh 2>/dev/null || true
+    if [[ -d "$src/scripts" ]]; then
+      echo "Would copy: $src/scripts/ -> $dest/scripts/"
     fi
+    return
+  fi
 
-    echo -e "${GREEN}✓ $name skills updated${NC}"
+  mkdir -p "$dest"
+  cp -f "$src/SKILL.md" "$dest/SKILL.md"
+
+  for skill in "${SKILL_DIRS[@]}"; do
+    echo "  -> $skill"
+    rm -rf "$dest/$skill"
+    cp -R "$src/$skill" "$dest/"
+  done
+
+  if [[ -d "$src/scripts" ]]; then
+    echo "  -> scripts"
+    rm -rf "$dest/scripts"
+    cp -R "$src/scripts" "$dest/"
+    chmod +x "$dest/scripts"/*.sh 2>/dev/null || true
+  fi
+
+  echo -e "${GREEN}$label skills installed.${NC}"
 }
 
-sync_hooks() {
-    local dest="$HOME/.claude"
+sync_claude_hooks() {
+  local claude_home="$HOME/.claude"
 
-    echo -e "${BLUE}Syncing hooks to $dest...${NC}"
-    mkdir -p "$dest"
+  if [[ "$WITH_CLAUDE_TOOLS" -ne 1 || "$INSTALL_CLAUDE" -ne 1 ]]; then
+    return
+  fi
 
-    # Copy hookify files from skills/hooks/
-    if [[ -d "$SCRIPT_DIR/hooks" ]]; then
-        for hook_file in "$SCRIPT_DIR/hooks/"hookify.*.md; do
-            if [[ -f "$hook_file" ]]; then
-                hook_name=$(basename "$hook_file")
-                echo "  → $hook_name"
-                cp -f "$hook_file" "$dest/"
-            fi
-        done
-        echo -e "${GREEN}✓ Hooks synced to ~/.claude/${NC}"
-    else
-        echo -e "${BLUE}No hooks directory found, skipping...${NC}"
-    fi
+  echo -e "${BLUE}Installing Claude-specific RPI tools to:${NC} $claude_home"
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "Would copy hooks from: $SCRIPT_DIR/hooks"
+    echo "Would initialize sessions from: $SCRIPT_DIR/templates/sessions"
+    echo "Would configure native hooks and shell aliases when possible"
+    return
+  fi
+
+  mkdir -p "$claude_home"
+
+  if [[ -d "$SCRIPT_DIR/hooks" ]]; then
+    for hook_file in "$SCRIPT_DIR/hooks"/hookify.*.md; do
+      [[ -f "$hook_file" ]] || continue
+      echo "  -> $(basename "$hook_file")"
+      cp -f "$hook_file" "$claude_home/"
+    done
+  fi
+
+  if [[ -d "$SCRIPT_DIR/templates/sessions" && ! -d "$claude_home/sessions" ]]; then
+    echo "  -> sessions template"
+    mkdir -p "$claude_home/sessions"
+    cp -f "$SCRIPT_DIR/templates/sessions/index.json" "$claude_home/sessions/index.json"
+  fi
+
+  setup_claude_native_hooks
+  setup_claude_aliases
 }
 
-sync_templates() {
-    local dest="$HOME/.claude"
+setup_claude_native_hooks() {
+  local settings_file="$HOME/.claude/settings.json"
+  local rpi_save_cmd="~/.claude/skills/scripts/rpi-session-save.sh"
 
-    echo -e "${BLUE}Syncing templates to $dest...${NC}"
+  if ! command -v jq >/dev/null 2>&1; then
+    echo -e "${YELLOW}  jq not found; skipping Claude native hook setup.${NC}"
+    return
+  fi
 
-    # Copy sessions template (only if sessions/ doesn't exist)
-    if [[ -d "$SCRIPT_DIR/templates/sessions" ]]; then
-        if [[ ! -d "$dest/sessions" ]]; then
-            echo "  → sessions/ (initializing session tracker)"
-            mkdir -p "$dest/sessions"
-            cp -f "$SCRIPT_DIR/templates/sessions/index.json" "$dest/sessions/"
-            echo -e "${GREEN}✓ Sessions initialized${NC}"
-        else
-            echo -e "${BLUE}  Sessions directory already exists, skipping...${NC}"
-        fi
-    fi
+  [[ -f "$settings_file" ]] || echo '{}' > "$settings_file"
+
+  if jq -e ".hooks.PreCompact[]?.hooks[]? | select(.command == \"$rpi_save_cmd\")" "$settings_file" >/dev/null 2>&1; then
+    echo "  -> native hooks already configured"
+    return
+  fi
+
+  local rpi_hook='{"hooks": [{"type": "command", "command": "~/.claude/skills/scripts/rpi-session-save.sh"}]}'
+  local updated
+  updated=$(jq --argjson rpi_hook "$rpi_hook" '
+    .hooks.PreCompact = (.hooks.PreCompact // []) + [$rpi_hook] |
+    .hooks.SessionEnd = (.hooks.SessionEnd // []) + [$rpi_hook]
+  ' "$settings_file")
+
+  echo "$updated" > "$settings_file"
+  echo "  -> native hooks configured"
 }
 
-setup_native_hooks() {
-    echo -e "${BLUE}Setting up native Claude Code hooks...${NC}"
+setup_claude_aliases() {
+  local shell_rc=""
+  local marker="# RPI Stack Aliases"
+  local legacy_marker="# RPI Skills Aliases"
 
-    local settings_file="$HOME/.claude/settings.json"
-    local rpi_save_cmd="~/.claude/skills/scripts/rpi-session-save.sh"
+  if [[ -n "${ZSH_VERSION:-}" || "${SHELL:-}" == *"zsh"* ]]; then
+    shell_rc="$HOME/.zshrc"
+  elif [[ -n "${BASH_VERSION:-}" || "${SHELL:-}" == *"bash"* ]]; then
+    shell_rc="$HOME/.bashrc"
+  else
+    echo -e "${YELLOW}  Unknown shell; skipping aliases.${NC}"
+    return
+  fi
 
-    # Ensure settings.json exists
-    if [[ ! -f "$settings_file" ]]; then
-        echo '{}' > "$settings_file"
-    fi
+  if grep -q -e "$marker" -e "$legacy_marker" "$shell_rc" 2>/dev/null; then
+    echo "  -> aliases already configured in $shell_rc"
+    return
+  fi
 
-    # Check if RPI hooks specifically are already configured
-    if jq -e ".hooks.PreCompact[]?.hooks[]? | select(.command == \"$rpi_save_cmd\")" "$settings_file" >/dev/null 2>&1; then
-        echo -e "${BLUE}  RPI native hooks already configured${NC}"
-        return
-    fi
+  cat >> "$shell_rc" <<'ALIASES'
 
-    # RPI hook entry to add
-    local rpi_hook='{"hooks": [{"type": "command", "command": "~/.claude/skills/scripts/rpi-session-save.sh"}]}'
+# RPI Stack Aliases
+alias rpi-tracker='~/.claude/skills/scripts/rpi-tracker.sh'
+alias rpi-tracker-list='~/.claude/skills/scripts/rpi-tracker.sh --list'
+alias rpi-status='~/.claude/skills/scripts/rpi-status.sh'
+ALIASES
 
-    # Add RPI hooks to PreCompact and SessionEnd (preserving existing hooks)
-    local updated=$(jq --argjson rpi_hook "$rpi_hook" '
-      .hooks.PreCompact = (.hooks.PreCompact // []) + [$rpi_hook] |
-      .hooks.SessionEnd = (.hooks.SessionEnd // []) + [$rpi_hook]
-    ' "$settings_file")
-
-    echo "$updated" > "$settings_file"
-
-    echo -e "${GREEN}✓ Native hooks configured:${NC}"
-    echo "    PreCompact  → Auto-save RPI session before context compaction"
-    echo "    SessionEnd  → Auto-save RPI session when Claude Code exits"
+  echo "  -> aliases added to $shell_rc"
 }
 
-setup_aliases() {
-    echo -e "${BLUE}Setting up shell aliases...${NC}"
+clean_skills() {
+  local dest="$1"
+  local label="$2"
 
-    # Determine shell config file
-    local shell_rc=""
-    if [[ -n "$ZSH_VERSION" ]] || [[ "$SHELL" == *"zsh"* ]]; then
-        shell_rc="$HOME/.zshrc"
-    elif [[ -n "$BASH_VERSION" ]] || [[ "$SHELL" == *"bash"* ]]; then
-        shell_rc="$HOME/.bashrc"
-    else
-        echo -e "${BLUE}  Unknown shell, skipping alias setup...${NC}"
-        return
-    fi
+  echo -e "${YELLOW}Removing $label RPI Stack skills from:${NC} $dest"
 
-    # Alias definitions
-    local aliases=(
-        "alias rpi-tracker='~/.claude/skills/scripts/rpi-tracker.sh'"
-        "alias rpi-tracker-list='~/.claude/skills/scripts/rpi-tracker.sh --list'"
-        "alias rpi-status='~/.claude/skills/scripts/rpi-status.sh'"
-        "alias rpi-progress='~/.claude/skills/scripts/rpi-progress.sh'"
-    )
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "Would remove: $dest/SKILL.md"
+    for skill in "${SKILL_DIRS[@]}"; do
+      echo "Would remove: $dest/$skill"
+    done
+    echo "Would remove: $dest/scripts when present"
+    return
+  fi
 
-    # Marker to identify our aliases block
-    local marker="# RPI Skills Aliases"
+  rm -f "$dest/SKILL.md"
+  for skill in "${SKILL_DIRS[@]}"; do
+    rm -rf "$dest/$skill"
+  done
+  rm -rf "$dest/scripts"
 
-    # Check if aliases already exist
-    if grep -q "$marker" "$shell_rc" 2>/dev/null; then
-        echo -e "${BLUE}  Aliases already configured in $shell_rc${NC}"
-    else
-        # Add aliases to shell config
-        echo "" >> "$shell_rc"
-        echo "$marker" >> "$shell_rc"
-        for alias_def in "${aliases[@]}"; do
-            echo "$alias_def" >> "$shell_rc"
-        done
-        echo -e "${GREEN}✓ Aliases added to $shell_rc${NC}"
-        echo -e "${BLUE}  Run 'source $shell_rc' or restart terminal to use:${NC}"
-        echo "    rpi-tracker       # Active session (detailed)"
-        echo "    rpi-tracker-list  # All sessions"
-        echo "    rpi-status        # Quick status"
-        echo "    rpi-progress      # Update session progress"
-    fi
+  echo -e "${GREEN}$label RPI Stack skills removed.${NC}"
 }
 
-case "${1:-all}" in
-    claude)
-        sync_skills "$CLAUDE_SKILLS" "Claude Code"
-        echo ""
-        sync_hooks
-        echo ""
-        sync_templates
-        echo ""
-        setup_native_hooks
-        echo ""
-        setup_aliases
-        ;;
-    codex)
-        sync_skills "$CODEX_SKILLS" "Codex"
-        ;;
-    copilot)
-        sync_skills "$COPILOT_SKILLS" "Copilot CLI"
-        ;;
-    hooks)
-        sync_hooks
-        echo ""
-        setup_native_hooks
-        ;;
-    templates)
-        sync_templates
-        ;;
-    aliases)
-        setup_aliases
-        ;;
-    all|"")
-        sync_skills "$CLAUDE_SKILLS" "Claude Code"
-        echo ""
-        sync_skills "$CODEX_SKILLS" "Codex"
-        echo ""
-        sync_skills "$COPILOT_SKILLS" "Copilot CLI"
-        echo ""
-        sync_hooks
-        echo ""
-        sync_templates
-        echo ""
-        setup_native_hooks
-        echo ""
-        setup_aliases
-        echo ""
-        echo -e "${GREEN}✓ All skills synced to Claude Code, Codex, and Copilot CLI!${NC}"
-        ;;
-    *)
-        echo "Usage: $0 [claude|codex|copilot|hooks|templates|aliases|all]"
-        echo ""
-        echo "  claude    - Sync to ~/.claude/skills (includes hooks, templates, aliases & native hooks)"
-        echo "  codex     - Sync to ~/.codex/skills only"
-        echo "  copilot   - Sync to ~/.copilot/skills only"
-        echo "  hooks     - Sync hooks to ~/.claude/ only (includes native hooks)"
-        echo "  templates - Sync templates (sessions) to ~/.claude/ only"
-        echo "  aliases   - Setup shell aliases (rpi-tracker, rpi-tracker-list, rpi-status)"
-        echo "  all       - Sync everything (default)"
-        exit 1
-        ;;
-esac
+if [[ "$CLEAN" -eq 1 ]]; then
+  [[ "$INSTALL_CLAUDE" -eq 1 ]] && clean_skills "$CLAUDE_DEST" "Claude"
+  [[ "$INSTALL_CODEX" -eq 1 ]] && clean_skills "$CODEX_DEST" "Codex"
+else
+  [[ "$INSTALL_CLAUDE" -eq 1 ]] && sync_skills "$CLAUDE_SRC" "$CLAUDE_DEST" "Claude"
+  [[ "$INSTALL_CLAUDE" -eq 1 ]] && sync_claude_hooks
+  [[ "$INSTALL_CODEX" -eq 1 ]] && sync_skills "$CODEX_SRC" "$CODEX_DEST" "Codex"
+
+  if [[ "$DRY_RUN" -eq 0 ]]; then
+    echo -e "${GREEN}RPI Stack install complete.${NC}"
+    echo "Restart Claude Code and/or Codex if already running so skills reload."
+  fi
+fi
