@@ -1,247 +1,127 @@
 ---
 name: code-review
-description: Reviews code for correctness, security, performance, and pattern compliance. P0/P1/P2 severity. Absorbs security and performance audit checks.
+description: Reviews code for correctness, security, performance, and pattern compliance. P0/P1/P2 severity. Stack-agnostic core with domain profile integration.
 ---
 
 # Code Review Skill
 
-Reviews all new and modified files for correctness, security, performance, and best practices.
+Performs a rigorous review of all newly created and modified files, evaluating correctness, security vulnerabilities, performance regressions, and adherence to project conventions.
+
+## When to Run
+
+- Immediately following the implementation phase before finalizing changes.
+- Reviewing an active git diff or PR branch.
+- Standalone check: `/code-review`, `/code-review --staged`, or `/code-review <path>`.
+
+## Review Execution & Subagent Isolation
+
+- **Clean Perspective**: When supported (`invoke_subagent` or `Task` tool), delegate code review to a separate subagent to evaluate changes objectively without conversational bias.
+- **Context Loading**:
+  1. Inspect the changed file diff (`git diff` or file inventory).
+  2. Read `AGENTS.md` and the relevant profile in `profiles/` (`flutter.md`, `frontend.md`, `backend.md`, `scripts.md`).
+  3. Compare changes against original acceptance criteria.
 
 ---
 
-## Severity Levels
+## Severity Classifications
 
-### P0 — Critical (Must Fix Before Merge)
-- Security vulnerabilities (injection, auth bypass, hardcoded secrets, insecure storage)
-- Data corruption or data loss risks
-- Crashes or critical runtime errors
-- Memory leaks (undisposed controllers, streams)
-- Main thread blocking operations
-- Breaking changes without migration
+### P0 — Critical (Blocking: Must Fix Before Completion)
+- **Security Flaws**: Hardcoded API keys/credentials, SQL/command injection, authentication or tenant isolation bypass, insecure direct object references (IDOR).
+- **Data Integrity**: Data corruption, accidental data deletion, unmigrated breaking schema alterations.
+- **Stability & Crashes**: Unhandled promise rejections, unhandled fatal exceptions, null dereferences, infinite loops.
+- **Memory & Resource Leaks**: Unclosed database connections, undisposed streams/controllers, open file handles.
+- **Execution Blocking**: Blocking synchronous I/O operations on the main UI/event thread.
 
 ### P1 — Important (Should Fix)
-- Logic errors in edge cases
-- Missing error handling for critical paths
-- Significant performance issues (unnecessary rebuilds, expensive build())
-- Missing input validation
-- Pattern violations causing maintenance burden
-- Missing keys in dynamic lists
-- Sensitive data logged
+- Logic flaws or unhandled edge cases in secondary flows.
+- Missing input validation or missing error boundaries.
+- Significant performance bottlenecks (N+1 queries, unindexed lookups, redundant heavy recalculations).
+- Violations of core project architectural patterns from `AGENTS.md`.
+- Sensitive data or credentials printed in application logs.
 
-### P2 — Nice-to-have (Consider)
-- Code style inconsistencies
-- Minor performance improvements (missing const)
-- Documentation gaps
-- Refactoring opportunities
+### P2 — Minor (Suggestions / Non-Blocking)
+- Minor style inconsistencies or naming improvements.
+- Opportunities for minor optimization or code simplification.
+- Documentation or test coverage additions.
 
 ---
 
-## Review Process
+## Review Dimensions
 
-### Step 1: Gather Context
+### 1. Correctness
+- Does the code fulfill the stated requirements and acceptance criteria?
+- Are boundary conditions, empty collections, nulls, and error states handled gracefully?
+- Are asynchronous operations, promises, and race conditions managed safely?
 
-```
-1. Identify files to review (new + modified, from implementation summary)
-2. Read AGENTS.md patterns
-3. Read original requirements if available
-```
+### 2. Security (OWASP & Secrets)
+- Are all external inputs validated and sanitized before use?
+- Are secrets strictly read from environment variables (never committed in code)?
+- Are authorization checks enforced at data access boundaries?
 
-### Step 2: Review Each File
+### 3. Performance & Resource Management
+- Are resources, subscriptions, and controllers properly released/disposed?
+- Are list structures virtualized or paginated?
+- Are database queries efficient and indexed?
 
-For each file, run all five checks below.
-
----
-
-## Check 1: Correctness
-
-```
-□ Business logic implements requirements correctly
-□ Calculations and conditions are accurate
-□ Null/empty/boundary cases handled
-□ State transitions are correct (no stale state)
-□ Async operations handled properly (await, error propagation)
-□ Race conditions considered
-```
-
----
-
-## Check 2: Security
-
-### P0 — Critical Security
-
-```
-□ No hardcoded credentials, API keys, or secrets
-□ No SQL injection (parameterized queries only)
-□ No command injection (shell input unescaped)
-□ Authentication check present on protected operations
-□ Authorization / permission check on all resource access
-□ Sensitive data not stored in plain text (use secure storage)
-□ No path traversal vulnerabilities (validate file paths)
-```
-
-### P1 — Important Security
-
-```
-□ User input validated before use
-□ Error messages don't leak internal info (no raw stack traces to UI)
-□ Sensitive data (tokens, passwords) not in logs
-□ HTTPS enforced for all sensitive API calls
-□ Weak cryptography avoided (no MD5/SHA1 for security purposes)
-□ CSRF protection on state-changing operations (web)
-```
-
-### P2 — Minor Security
-
-```
-□ Verbose error messages minimized
-□ Security headers present (web)
-□ Input length limits on text fields
-```
-
----
-
-## Check 3: Performance
-
-### P0 — Critical Performance
-
-```
-□ No infinite loops or unbounded recursion
-□ All controllers/streams/subscriptions disposed (no memory leaks)
-□ No blocking synchronous I/O on main thread (readAsStringSync, etc.)
-□ No O(n²) algorithms on large datasets
-□ No unbounded list/map growth
-```
-
-### P1 — Important Performance
-
-```
-□ No unnecessary widget rebuilds (use const where possible)
-□ No expensive operations inside build() (sorting, parsing, filtering)
-□ Dynamic lists use keys (ValueKey or ObjectKey)
-□ Long lists use lazy builders (ListView.builder, not ListView)
-□ Same calculation not repeated multiple times without caching
-□ Widget methods (_buildX) replaced with separate StatelessWidget classes
-```
-
-### P2 — Minor Performance
-
-```
-□ const constructors used where possible
-□ String concatenation in loops uses StringBuffer
-□ Repeated network calls consider local caching
-```
-
----
-
-## Check 4: Pattern Compliance (AGENTS.md)
-
-```
-□ State management follows project pattern (check AGENTS.md)
-□ Models use project model pattern
-□ Styling uses project constants (no hardcoded colors, sizes, text styles)
-□ Widget structure follows project convention
-□ File organization follows project structure
-□ Naming conventions correct
-```
-
----
-
-## Check 5: Test Coverage
-
-```
-□ Critical logic has unit tests
-□ Edge cases covered in tests
-□ Error paths tested
-□ UI states tested (loading, error, empty, success)
-□ No real API calls in tests (proper mocking)
-```
+### 4. Stack Profile & Pattern Compliance
+- Check against repository `AGENTS.md`.
+- Consult the matching domain profile in `profiles/`:
+  - Flutter/Dart: Check `profiles/flutter.md` for widget splitting, `const` usage, and controller disposal.
+  - Web Frontend: Check `profiles/frontend.md` for Server/Client boundaries, hydration, and a11y.
+  - Backend API: Check `profiles/backend.md` for transactions, idempotency, and migration safety.
+  - Scripts: Check `profiles/scripts.md` for variable quoting, exit codes, and dry-run support.
 
 ---
 
 ## Output Template
 
-Save to `OUTPUT_DIR/review-{feature}.md`:
+Save to `OUTPUT_DIR/review-{feature}.md` (or return inline):
 
 ```markdown
 # Code Review: {Feature Name}
 
-## Summary
+## Verdict: {APPROVE / REQUEST CHANGES}
 
+### Severity Summary
 | Severity | Count | Status |
 |----------|-------|--------|
 | P0 (Critical) | {n} | {BLOCKING / CLEAR} |
-| P1 (Important) | {n} | |
-| P2 (Nice-to-have) | {n} | |
-
-**Verdict**: {APPROVE / REQUEST CHANGES}
+| P1 (Important) | {n} | {Actionable} |
+| P2 (Minor) | {n} | {Informational} |
 
 ---
 
-## P0 — Critical Issues
-
-{If none: "No critical issues found."}
+## P0 Issues (Critical Blockers)
+{If none: "No critical blockers found."}
 
 ### P0-1: {Issue Title}
-- **File**: `path/to/file.dart:{line}`
-- **Category**: {Security / Performance / Correctness}
-- **Issue**: {description}
-- **Impact**: {what goes wrong}
-- **Fix**: {how to fix}
+- **File**: `{path/to/file}:{line}`
+- **Category**: Security / Correctness / Performance
+- **Problem**: {Detailed description}
+- **Required Fix**: {Exact guidance or code snippet to resolve}
 
 ---
 
-## P1 — Important Issues
-
+## P1 Issues (Important)
 ### P1-1: {Issue Title}
-- **File**: `path:{line}`
-- **Category**: {category}
-- **Issue**: {description}
-- **Fix**: {suggestion}
+- **File**: `{path/to/file}:{line}`
+- **Category**: {Category}
+- **Recommendation**: {Suggested fix}
 
 ---
 
-## P2 — Nice-to-have
-
-### P2-1: {Issue Title}
-- **File**: `path:{line}`
-- **Suggestion**: {improvement}
+## P2 Issues (Minor Improvements)
+- `{file}:{line}`: {Suggestion}
 
 ---
 
-## Pattern Compliance
-
-| Pattern | Status | Notes |
-|---------|--------|-------|
-| State Management | ✅/❌ | {notes} |
-| Model Pattern | ✅/❌ | {notes} |
-| Styling | ✅/❌ | {notes} |
-| Widget Structure | ✅/❌ | {notes} |
-| File Organization | ✅/❌ | {notes} |
+## Pattern Compliance ({Stack})
+- Architecture & `AGENTS.md`: {COMPLIANT / MINOR DEVIATIONS / NON-COMPLIANT}
+- Notes: {Observations against relevant profile}
 
 ---
 
-## Files Reviewed
-
-| File | Issues |
-|------|--------|
-| `path` | P0: {n}, P1: {n}, P2: {n} |
-
----
-
-## Verdict
-
-{APPROVED / APPROVED WITH COMMENTS / CHANGES REQUESTED}
-
-{Reasoning. List must-fix items if changes requested.}
-```
-
----
-
-## Quick Commands
-
-```
-/code-review                — Review recent changes (all new/modified files)
-/code-review path/to/file   — Review specific file
-/code-review --security     — Security-focused review only
-/code-review --staged       — Review staged git changes
+## Resolution Checklist
+- [ ] Fix all P0 issues (Required)
+- [ ] Address P1 issues or document justification
 ```

@@ -1,163 +1,118 @@
 ---
 name: plan
-description: Creates detailed implementation plan from validated research. Produces task breakdown with dependencies and file inventory.
+description: Transforms validated research into an actionable, decision-complete implementation plan with dependency ordering and verification steps.
 ---
 
 # Plan Skill
 
-Transforms validated research into an actionable implementation plan.
+Transforms research findings and user requirements into a decision-complete, sequentially ordered implementation plan.
+
+## When to Use
+
+- Creating an implementation plan after completing research.
+- Breaking down a complex feature, refactor, or bugfix into atomic, verifiable steps.
+- Updating or verifying an existing plan before code changes.
+
+## Guiding Principles
+
+1. **Stack-Agnostic Core**: Follow architecture patterns from the active repository's `AGENTS.md` and domain profile in `profiles/` (`flutter.md`, `frontend.md`, `backend.md`, `scripts.md`).
+2. **Atomic & Sequential**: Structure tasks so each step leaves the codebase in a compilable, testable state.
+3. **Verification-First**: Every task must define how it will be verified (compiler check, targeted test, or lint command).
+4. **Decisions Included**: Don't leave edge cases or architecture branches ambiguous in the plan. Document confirmed decisions and safe defaults.
 
 ---
 
-## Agent Compatibility
+## Phase 1: Architectural Alignment
 
-- AskUserQuestion: use the tool in Claude Code; in Codex CLI, ask the user directly.
-- OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
-
----
-
-## Phase 1: Architectural Decisions
-
-Before task breakdown, decide:
-- Which existing patterns and components to reuse (from research + AGENTS.md)
-- New vs. extend: create new files or modify existing?
-- Data flow: API → Repository → Service → Controller → UI (follow project layers)
-- State management approach (follow AGENTS.md)
+Before writing tasks, establish:
+- **Component Boundaries**: Extend existing modules vs. create new isolated modules.
+- **Data Flow**: Data Source / DB / API → Domain Logic / Services → State / Controller → UI / Consumer.
+- **Stack Profile**: Load and apply guidelines from `profiles/<stack>.md`.
 
 ---
 
-## Phase 2: Open Questions
+## Phase 2: Resolving Remaining Edge Cases
 
-Before writing the plan, identify any open edge cases or scope questions:
-- Empty states, error states, boundary conditions with no specified behavior
-- Scope ambiguity: "should X be included?"
-- Conflicting requirements
-
-**If there are ANY open questions, list them ALL and ask in a single batch before writing the plan.**
-
-> Do NOT silently assume edge case behavior — ask.
-> Document the user's answer in the plan under "Confirmed Decisions".
-
-Example:
-```
-Before I write the plan, I need to clarify a few things:
-
-1. [Edge case] When the list is empty, should we show "No results" or hide the section?
-2. [Scope] Should {feature X} be included in this sprint or deferred?
-3. [Architecture] Should we extend {ExistingController} or create a new one?
-```
+If minor UX or technical questions remain:
+- Check existing codebase patterns first.
+- Apply safe defaults for standard behaviors (e.g. empty lists show standard empty placeholder; network errors trigger standard toast/banner). Document under **Confirmed Decisions & Assumptions**.
+- If a remaining question alters core product behavior or scope, ask the user concisely with a recommended default before finalizing the plan.
 
 ---
 
 ## Phase 3: Task Decomposition
 
-Break implementation into atomic, sequential tasks. Each task:
+Structure tasks in dependency order:
 
-```
-T{n}: {Short title}
-  Layer: data / domain / application / presentation
-  Files: {list of files to create or modify}
-  Requires: {R1, R2...} (requirement IDs it fulfills)
-  Depends on: {T1, T2...} (tasks that must complete first)
-  Acceptance criteria:
-    - [ ] {specific verifiable criterion}
-```
+```text
+T1: Foundation & Data Layer
+  - Target: Models, schemas, DTOs, migrations, API clients
+  - Verification: compilation / schema validation / model unit test
 
-### Task Ordering Rules
+T2: Business Logic & Application Layer
+  - Target: Services, use cases, state management, controllers
+  - Verification: business logic unit tests / mock verification
 
-1. **Foundation first:** Models → Services → Controllers → Screens
-2. **Layer order:** Data → Domain → Application → Presentation
-3. **No circular dependencies**
-4. **Tests adjacent to related code**
+T3: Presentation & Consumer Layer
+  - Target: UI components, screens, CLI commands, route registration
+  - Verification: visual inspection / widget or component tests
 
----
-
-## Phase 4: File Inventory
-
-List every file to create or modify:
-
-```
-Create:
-  lib/src/features/{feature}/data/{name}_response.dart
-  lib/src/features/{feature}/presentation/{screen}_screen.dart
-  ...
-
-Modify:
-  lib/src/routes/app_router.dart  (add route)
-  ...
+T4: Integration & Edge-case Hardening
+  - Target: Error boundaries, empty states, permissions, end-to-end integration
+  - Verification: full lint, end-to-end flow check
 ```
 
 ---
 
-## Phase 5: Risk Assessment
+## Phase 4: Verification Strategy
 
-Brief notes on:
-- Technical unknowns remaining
-- External dependencies (new API endpoints, third-party libs)
-- Rollback considerations
+Every plan must specify concrete verification commands:
+- **Static Analysis**: Exact lint/typecheck command (e.g. `npm run lint`, `flutter analyze`, `golangci-lint run`).
+- **Targeted Automated Tests**: Exact unit/integration test commands for the touched paths.
+- **Manual Verification Steps**: Step-by-step instructions to verify the change visually or via API call.
 
 ---
 
 ## Output Template
 
-Save to `OUTPUT_DIR/plan-{feature}.md`:
+Save to `OUTPUT_DIR/plan-{feature}.md` (or present inline for Fast-Path):
 
 ```markdown
 # Implementation Plan: {Feature Name}
 
 ## Metadata
-- Date: {date}
-- Source: research-{feature}.md
+- Date: {YYYY-MM-DD}
 - Complexity: {Low / Medium / High}
+- Stack: {Flutter / Frontend / Backend / Tooling}
 
-## Confirmed Decisions
-| Question | Decision |
-|----------|----------|
-| {edge case} | {answer} |
-
-## Architectural Approach
-{Brief description of approach and patterns used}
+## Architectural Approach & Confirmed Decisions
+- **Approach**: {Summary of architectural design and pattern alignment}
+- **Assumptions & Defaults**: {List of defaults applied for edge cases}
 
 ## Tasks
 
 ### T1: {Title}
-- **Layer**: {layer}
-- **Files**: `{path}`
-- **Requires**: R1, R2
-- **Depends on**: —
-- **Acceptance criteria**:
-  - [ ] {criterion}
+- **Layer / Area**: {Data / Domain / Application / Presentation / Tooling}
+- **Files**:
+  - `[NEW / MODIFY]` `{path/to/file}`
+- **Dependencies**: None
+- **Acceptance Criteria**:
+  - [ ] {Specific verifiable criterion}
+- **Verification**: `{command or manual check}`
 
 ### T2: {Title}
 ...
 
-## File Inventory
+## File Inventory Summary
+| File | Action | Purpose |
+|------|--------|---------|
+| `path/to/file` | New / Modify | {Description} |
 
-### Created
-| File | Purpose |
-|------|---------|
-| `path` | {purpose} |
+## Verification Plan
+- **Lint / Analyze**: `{exact command}`
+- **Automated Tests**: `{exact test command}`
+- **Manual Check**: {Step-by-step instructions}
 
-### Modified
-| File | Changes |
-|------|---------|
-| `path` | {changes} |
-
-## Requirement Traceability
-| Requirement | Addressed by |
-|-------------|--------------|
-| R1: {desc} | T1, T3 |
-| R2: {desc} | T2 |
-
-## Risks
-{List or "None identified"}
-```
-
----
-
-## Quick Commands
-
-```
-/plan        — Create plan from validated research
-/plan verify — Verify existing plan against requirements
+## Rollback & Blast Radius
+- {Rollback strategy if deployment fails or side-effects occur}
 ```

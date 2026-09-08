@@ -1,42 +1,46 @@
 {
   "name": "rpi-stack",
-  "version": "1.0.0",
-  "description": "Lean Research-Plan-Implement workflow skills for Claude Code and Codex.",
+  "version": "2.0.0",
+  "description": "Adaptive Research-Plan-Implement workflow skills for Claude Code, Codex, and Antigravity.",
   "author": {
     "name": "Kick Avenue",
     "email": "",
-    "url": ""
+    "url": "https://github.com/ferdiangunawan/rpi-stack"
   },
-  "homepage": "",
-  "repository": "",
+  "homepage": "https://github.com/ferdiangunawan/rpi-stack",
+  "repository": "https://github.com/ferdiangunawan/rpi-stack.git",
   "license": "MIT",
   "keywords": [
     "codex",
+    "claude",
+    "antigravity",
+    "gemini",
     "skills",
     "workflow",
     "research",
     "planning",
     "implementation",
-    "code-review"
+    "code-review",
+    "rpi"
   ],
   "skills": "./",
   "interface": {
     "displayName": "RPI Stack",
-    "shortDescription": "Research, plan, implement, audit, and review coding work in Codex.",
-    "longDescription": "RPI Stack provides a lean 6-skill Research-Plan-Implement workflow for Claude Code and Codex. Claude installs slash-command-friendly skills plus hookify guards; Codex installs the same skill stack with plugin metadata for Codex discovery.",
+    "shortDescription": "Adaptive Research, Plan, Implement, Audit, and Code Review workflows for AI coding agents.",
+    "longDescription": "RPI Stack provides an adaptive 6-skill workflow system for Claude Code, OpenAI Codex, and Google Antigravity / Gemini CLI. Features adaptive depth (Fast-Path for bugfixes, Deep-Path for multi-step features), smart clarification with trade-off recommendations, adversarial quality gates, pluggable stack profiles (Flutter, Frontend Web, Backend API, Scripts), and behavioral guardrails.",
     "developerName": "Kick Avenue",
     "category": "Productivity",
     "capabilities": [
       "Interactive",
       "Write"
     ],
-    "websiteURL": "",
+    "websiteURL": "https://github.com/ferdiangunawan/rpi-stack",
     "privacyPolicyURL": "",
     "termsOfServiceURL": "",
     "defaultPrompt": [
       "Use rpi to implement this feature.",
-      "Use research before changing this code.",
-      "Use code-review to review my diff."
+      "Use research before modifying this architecture.",
+      "Use code-review to review my git diff."
     ],
     "brandColor": "#2563EB"
   }

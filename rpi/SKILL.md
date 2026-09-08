@@ -1,146 +1,113 @@
 ---
 name: rpi
-description: Use when implementing features from Jira tickets, PRDs, or user requirements. Orchestrates Research-Plan-Implement workflow with quality gates.
+description: Orchestrates adaptive Research-Plan-Implement workflows with quality gates. Supports Fast-Path for bugfixes and Deep-Path for multi-step features.
 ---
 
-# RPI - Research, Plan, Implement (Orchestrator)
+# RPI — Research, Plan, Implement (Orchestrator)
 
-Full workflow orchestrator that invokes individual skills in sequence with quality gates.
+The core workflow orchestrator that coordinates research, planning, implementation, quality gates, and code review with adaptive depth.
 
+```text
+Tier 1 (Fast-Path):  Grounded Plan & Verification ───────────► Implement ──► Scoped Review
+Tier 2 (Deep-Path):  Research ──► Audit ──► Plan ──► Audit ──► User Gate ──► Implement ──► Code Review
 ```
-Input → Research → Audit → Plan → Audit → Approve → Implement → Code Review
-```
 
 ---
 
-## Agent Compatibility
+## Agent Compatibility & Ecosystem
 
-- OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
-- Invoke sub-skills with the Skill tool (Claude Code) or by naming the skill in the prompt (Codex CLI / Copilot CLI).
-
-## When to Use
-
-- User provides a Jira issue key (e.g., KB-1234)
-- User provides a Confluence PRD URL
-- User describes a feature to implement
+- **Output Directory**: Writes artifacts to `OUTPUT_DIR` (`.claude/output`, `.codex/output`, or project artifacts directory) when requested or in multi-session mode; supports inline conversational handoffs for fast iteration.
+- **Subagent Parallelism**: When subagent tools are present (`invoke_subagent` in Antigravity, `Task` in Claude Code), delegates read-only research and adversarial review to subagents to preserve main agent context.
+- **Sub-skill Invocation**: Uses the `Skill` tool (Claude Code), prompts (Codex), or native skill/tool dispatch (Antigravity).
 
 ---
 
-## Step 1: Input & Feature Naming
+## Workflow Tiers (Adaptive Depth)
 
-Derive **feature name** from input (used for all output files):
-- Jira key `KB-1234` → `kb-1234`
-- Confluence URL → sanitized page title slug
-- Direct prompt → short slug, max 30 chars (e.g., `export-csv`)
+Determine the appropriate workflow tier based on the task complexity:
 
-**Resume:** If output files for this feature already exist in OUTPUT_DIR (e.g., `research-{feature}.md`), read them and skip to the appropriate step.
+### Tier 1: Fast-Path (Tactical)
+**Criteria**: Localized bugfixes, small UI adjustments, single-component tweaks, or minor refactors (< 3 files, low architectural risk).
+1. **Grounded Plan**: Inspect the codebase, read `AGENTS.md`, and formulate a compact task breakdown with verification steps in one step.
+2. **Execute & Verify**: Implement the changes, run targeted lint/tests.
+3. **Scoped Review**: Inspect git diff for correctness, security, and pattern compliance.
 
----
-
-## Step 2: Research
-
-Invoke `/research {input}`. Produces `OUTPUT_DIR/research-{feature}.md`.
-
----
-
-## Step 3: Research Audit
-
-Invoke `/audit research`. Quality gate:
-
-| Check | Gate |
-|-------|------|
-| All requirements traceable | No phantom requirements |
-| Confidence high enough to plan | No major open unknowns |
-
-**FAIL** → Stop, report findings, ask user for clarification, re-run `/research`.
-**PASS** → Proceed.
+### Tier 2: Deep-Path (Strategic)
+**Criteria**: New features, multi-file architectural changes, database migrations, authentication, public API changes, or Jira tickets/PRDs.
+Follow the full 7-step quality-gated workflow below.
 
 ---
 
-## Step 4: Plan
+## Deep-Path Execution Protocol
 
-Invoke `/plan`. Produces `OUTPUT_DIR/plan-{feature}.md`.
+### Step 1: Input Analysis & Naming
+- Derive a canonical feature slug: Jira key (e.g. `KB-1234` → `kb-1234`), issue title, or prompt slug (e.g. `csv-export`).
+- **Resumability Check**: If `OUTPUT_DIR/plan-{feature}.md` or `OUTPUT_DIR/research-{feature}.md` exists, read the existing state and resume at the first unfinished phase.
 
----
+### Step 2: Research (`/research`)
+- Gather requirements from Jira, PRD, or prompt.
+- Inspect codebase patterns and relevant profile in `profiles/`.
+- Apply **Smart Clarification**: use safe defaults for trivial UI/internal choices; batch material questions with opinionated recommendations.
+- Produces: `research-{feature}.md` (or structured research handoff).
 
-## Step 5: Plan Audit
+### Step 3: Research Audit (`/audit research`)
+*Optional for medium tasks; recommended for high-risk, exploratory, or unfamiliar areas.*
+- Quality check for evidence grounding and scope definition.
+- If **FAIL**: Resolve blockers or ask for missing specifications before planning.
 
-Invoke `/audit plan`. Quality gate:
+### Step 4: Plan (`/plan`)
+- Break down implementation into atomic, dependency-ordered tasks.
+- Specify exact verification commands for each task.
+- Document architectural approach, assumptions, and blast radius.
+- Produces: `plan-{feature}.md`.
 
-| Check | Gate |
-|-------|------|
-| Every requirement has a task | Full traceability |
-| No unnecessary scope added | No overengineering |
-| No requirements missed | No underengineering |
-| Follows AGENTS.md patterns | Pattern compliance |
+### Step 5: Plan Audit (`/audit plan`)
+- Mandatory quality gate before writing code:
+  - **Evidence Integrity**: No fabricated APIs or hallucinated libraries.
+  - **Scope Balance**: No unrequested overengineering; no missing edge cases.
+  - **Feasibility & Safety**: Rollback considered, database safety verified.
+  - **Pattern Compliance**: Follows `AGENTS.md` and domain profile.
+- If **FAIL**: Revise plan and re-audit until **PASS** or acceptable **WARN**.
 
-**FAIL** → Revise plan, re-run `/audit plan`.
-**PASS** → Proceed.
+### Step 6: Human Gate (Approval)
+Present a concise plan summary to the user before writing any code:
 
----
-
-## Step 6: User Approval
-
-Present a concise plan summary:
-
-```
-Feature: {feature name}
+```text
+Feature: {feature-name} ({complexity})
 Tasks: {count} | New files: {n} | Modified: {n}
 
 Tasks:
-  T1: {title}
-  T2: {title}
-  ...
+  T1: {title} (Verify: {command})
+  T2: {title} (Verify: {command})
 
-Quality Gates: Research Audit ✓ | Plan Audit ✓
-
-Proceed with implementation? (yes/no)
+Quality Gate: Plan Audit: PASS ✓
+Proceed with implementation?
 ```
+Wait for explicit confirmation before proceeding.
 
-Wait for explicit approval. If user requests changes, revise and re-audit before re-presenting.
+### Step 7: Implement (`/implement`)
+- Execute tasks in dependency order.
+- Verify each task with targeted compilation/tests.
+- Never run unauthorized destructive tests against non-local databases.
 
----
-
-## Step 7: Implement
-
-Invoke `/implement`. Executes tasks in dependency order, verifies each, runs lint.
-
----
-
-## Step 8: Code Review
-
-Invoke `/code-review`. Reviews all new and modified files for correctness, security, and performance with P0/P1/P2 findings.
-
-| Severity | Action |
-|----------|--------|
-| P0 (Critical) | Must fix before completing |
-| P1 (Important) | Should fix, discuss with user |
-| P2 (Nice-to-have) | Note for future |
-
-If P0 found: fix all P0 issues, re-run `/code-review`.
+### Step 8: Code Review (`/code-review`)
+- Review changed files for Correctness, Security (OWASP), Performance, and Pattern Compliance.
+- Classify findings into P0 (Critical/Blocking), P1 (Important), and P2 (Minor).
+- **Rule**: If P0 issues exist, resolve them immediately and re-verify before marking work complete.
 
 ---
 
-## Output Files
-
-| File | Phase |
-|------|-------|
-| `research-{feature}.md` | Research |
-| `audit-research-{feature}.md` | Research Audit |
-| `plan-{feature}.md` | Plan |
-| `audit-plan-{feature}.md` | Plan Audit |
-| `review-{feature}.md` | Code Review |
-
-## Quick Reference
+## Quick Reference Commands
 
 ```bash
-/rpi KB-1234              # From Jira
-/rpi {confluence-url}     # From Confluence
-/rpi "Add export feature" # From direct prompt
+/rpi KB-1234               # Deep-Path feature from Jira
+/rpi https://docs/.../prd  # Deep-Path feature from PRD
+/rpi "Fix checkout total"  # Fast-Path or Deep-Path based on scope
+
+# Individual skills for targeted execution:
+/research <topic>
+/plan
+/audit plan
+/implement
+/code-review
 ```
-
-**Resume after context loss:** Output files in OUTPUT_DIR are the source of truth. Read `research-{feature}.md` and `plan-{feature}.md` to resume at the right step.
-
-**Individual skills (standalone):**
-- Use `/rpi` for complete feature implementation
-- Use individual skills for targeted tasks or exploration

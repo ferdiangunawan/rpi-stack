@@ -1,166 +1,171 @@
 # RPI Stack
 
-Lean Research-Plan-Implement workflow system for Claude Code and Codex. Quality-gated, context-preserving, and focused on keeping the agent productive without ceremony.
+Adaptive Research-Plan-Implement workflow system for modern AI coding agents: **Claude Code**, **OpenAI Codex**, and **Google Antigravity / Gemini CLI**.
+
+Quality-gated, context-preserving, and engineered to maximize LLM agency without process overhead or learned helplessness.
 
 ---
 
-## Design Principles
+## Core Design Principles
 
-1. **Linear and clear** — research, audit, plan, audit, approve, implement, review
-2. **Low ceremony** — 6 focused skills, not a large process framework
-3. **Qualitative gates** — PASS/WARN/FAIL criteria instead of invented scoring
-4. **Outputs as state** — markdown artifacts are the source of truth
-5. **Ask once** — clarification questions are batched instead of interrupting repeatedly
+1. **Adaptive Depth** — Fast-Path for single-file bugfixes; Deep-Path for multi-step architectural features.
+2. **Smart Clarification** — Inspect first; apply safe documented defaults for internal choices; provide opinionated recommendations with trade-offs when asking material questions.
+3. **Decoupled Architecture** — 6 universal core skills with pluggable domain profiles (`flutter.md`, `frontend.md`, `backend.md`, `scripts.md`).
+4. **Adversarial Quality Gates** — Grounded evidence checks and qualitative PASS/WARN/FAIL verdicts.
+5. **Universal Agent Support** — First-class integration for Claude Code, Codex, and Antigravity / Gemini CLI.
 
 ---
 
-## Architecture
+## Architecture & Workflows
 
+### Tier 1: Fast-Path (Tactical)
+For bugfixes, minor refactors, and isolated components (< 3 files):
+```text
+Input (Bug / Task) ──► Grounded Plan & Checks ──► Implement ──► Scoped Review
 ```
+
+### Tier 2: Deep-Path (Strategic)
+For complex features, new APIs, multi-file refactors, or Jira tickets:
+```text
 Input (Jira / PRD / Prompt)
          │
          ▼
-   [RESEARCH]  ─── Ask all clarifying questions at once (if any)
+   [RESEARCH]  ─── Smart clarification (recommendations + trade-offs)
          │          Output: research-{feature}.md
          ▼
-  [AUDIT RESEARCH]  ─── PASS / WARN / FAIL
-         │ FAIL → revise and re-run
-         ▼
-    [PLAN]  ─── Ask all open questions at once (if any)
-         │       Output: plan-{feature}.md
-         ▼
-  [AUDIT PLAN]  ─── Requirements traced? Balanced? Pattern-compliant?
-         │ FAIL → revise and re-run
-         ▼
- [USER APPROVAL]  ─── Present plan summary, wait for explicit yes
+  [AUDIT RESEARCH] ─── Optional check for high-risk / exploratory work
          │
          ▼
-  [IMPLEMENT]  ─── Task by task, verify each
-         │          Output: code changes
+     [PLAN]  ─── Verification-first task breakdown with dependency ordering
+         │       Output: plan-{feature}.md
          ▼
- [CODE REVIEW]  ─── Correctness + Security + Performance (P0/P1/P2)
-                    Output: review-{feature}.md
+   [AUDIT PLAN]  ─── Quality gate: Evidence integrity + Scope balance + AGENTS.md
+         │ FAIL → revise and re-audit
+         ▼
+  [USER APPROVAL]  ─── Concise plan summary; wait for explicit human confirmation
+         │
+         ▼
+   [IMPLEMENT]  ─── Sequential execution with safety rails against remote test DBs
+         │          Output: code modifications
+         ▼
+  [CODE REVIEW]  ─── Multi-vector review: Correctness + Security + Performance (P0/P1/P2)
+                     Output: review-{feature}.md
 ```
 
 ---
 
-## Skills
+## The 6 Core Skills
 
-| Skill | Purpose |
-|-------|---------|
-| `rpi` | Full orchestrator — runs all skills in sequence |
-| `research` | Gather context; ask clarifying questions as a batch |
-| `audit` | Qualitative gate for hallucination, scope, and traceability |
-| `plan` | Task breakdown with dependencies; ask open questions as a batch |
-| `implement` | Task-by-task execution following `AGENTS.md` |
-| `code-review` | Final review: correctness, security, performance, patterns |
-
-Security and performance checks live inside `code-review`; there are no separate `audit-security` or `audit-performance` skills.
+| Skill | Purpose | Key Innovations |
+|-------|---------|-----------------|
+| `rpi` | Workflow orchestrator | Adaptive depth (Fast-Path vs Deep-Path), subagent delegation, resumable artifacts |
+| `research` | Evidence gathering | Smart clarification (safe defaults + opinionated options), tool-agnostic connectors |
+| `audit` | Adversarial quality gate | Evidence integrity, scope balance, blast radius safety, PASS/WARN/FAIL verdicts |
+| `plan` | Task decomposition | Verification-first planning, dependency ordering, rollback considerations |
+| `implement` | Systematic execution | Safe test execution rules, universal progress tracking, targeted verification |
+| `code-review` | Multi-vector review | P0/P1/P2 classification, OWASP security, performance hot-paths, pattern compliance |
 
 ---
 
-## Agent-Specific Support
+## Pluggable Domain Profiles
 
-RPI uses the same lean 6-skill model for both agents, but installs the right supporting tools per agent.
+Domain conventions and framework-specific checklists live under `profiles/` rather than cluttering core skills:
 
-| Agent | Skills Destination | Agent-Specific Support |
-|-------|--------------------|------------------------|
-| Claude Code | `~/.claude/skills` | Slash-command usage and hookify guard files copied to `~/.claude/` |
-| Codex | `~/.codex/skills` | Codex skill loading plus `.codex-plugin/plugin.json` metadata |
-
-Claude hooks are behavioral guards only:
-
-| Hook | Purpose |
-|------|---------|
-| `rpi-audit-before-implement` | Blocks `/implement` if plan audit has not passed |
-| `rpi-p0-blocker` | Blocks completion when P0 findings are unresolved |
-
-No session scripts, progress scripts, or session JSON tracker are installed.
+- **[`profiles/flutter.md`](profiles/flutter.md)**: StateNotifier/Bloc immutability, `const` constructors, widget splitting, controller disposal, `flutter analyze`/`flutter test`.
+- **[`profiles/frontend.md`](profiles/frontend.md)**: Next.js 15 App Router, Server vs Client components, Tailwind/Shadcn, a11y, hydration.
+- **[`profiles/backend.md`](profiles/backend.md)**: API architecture, database migrations, transaction boundaries, idempotency, N+1 query prevention, authorization.
+- **[`profiles/scripts.md`](profiles/scripts.md)**: POSIX shell standards, `set -euo pipefail`, dry-run support, argument validation.
 
 ---
 
-## Install
+## Agent Platform Support
 
+| Agent | Skills Destination | Integration Details |
+|-------|--------------------|---------------------|
+| **Claude Code** | `~/.claude/skills` | Slash commands (`/rpi`) + native tool use |
+| **OpenAI Codex** | `~/.codex/skills` | Prompt phrasing (`Use rpi...`) + `.codex-plugin/plugin.json` metadata |
+| **Antigravity / Gemini CLI** | `~/.gemini/config/skills` | Slash commands or prompts + Native subagent execution |
+| **Project-Local** | `.agents/skills` or custom | Isolated to active repository via `./install.sh --project` |
+
+---
+
+## Installation
+
+### Fast Install (Auto-detects active agents)
 ```bash
-git clone <this-repo-url>
+git clone https://github.com/ferdiangunawan/rpi-stack.git
 cd rpi-stack
 ./install.sh
 ```
 
-Install one agent only:
-
+### Targeted Installs
 ```bash
+# Install specific agent
 ./install.sh claude
 ./install.sh codex
-```
+./install.sh gemini
 
-Useful options:
+# Install to all supported agents
+./install.sh all
 
-```bash
+# Install into current project
+./install.sh --project
+
+# Dry run / preview actions
 ./install.sh --dry-run
+
+# Remove installed skills
 ./install.sh --clean
-./install.sh --claude-dest /custom/claude/skills
-./install.sh --codex-dest /custom/codex/skills
 ```
 
-Restart Claude Code or Codex if it was already running.
+Or using Makefile:
+```bash
+make install     # Install to all detected agents
+make claude      # Claude Code only
+make codex       # Codex only
+make gemini      # Antigravity / Gemini CLI only
+make diff        # Compare repo skills with installed skills
+make clean       # Remove installed skills
+```
 
 ---
 
-## Usage
+## Usage Guide
 
-Claude Code uses slash commands:
+Run RPI in your agent's normal execution mode:
 
+### Claude Code (Slash Commands)
 ```text
-/rpi KB-1234
-/research KB-1234
-/audit plan
-/plan
-/implement
-/code-review
+/rpi KB-1234              # Full workflow for Jira issue
+/rpi "Fix payment total"  # Adaptive Fast-Path or Deep-Path
+/research KB-1234         # Research only
+/audit plan               # Audit plan
+/code-review              # Review changed files
 ```
 
-Codex uses skill names in the prompt:
-
+### Codex / Copilot CLI (Natural Language Prompts)
 ```text
 Use rpi to implement KB-1234
-Use research to inspect checkout before changing it
-Use plan to create an implementation plan
-Use code-review to review my current diff
+Use research to inspect the authentication flow
+Use plan to break down this refactor
+Use code-review to review my git diff
 ```
 
-> Run RPI in the agent's normal execution/autopilot mode, not the built-in planning-only mode. RPI already contains its own research and planning phases.
+### Antigravity / Gemini CLI
+```text
+/rpi KB-1234
+Use rpi to implement this ticket
+```
 
 ---
 
-## Output Files
+## Resumability
 
-Artifacts are written in the active project:
+RPI artifacts in `OUTPUT_DIR` (`.claude/output`, `.codex/output`, or project artifacts) provide durable state:
+- `research-{feature}.md`
+- `audit-research-{feature}.md`
+- `plan-{feature}.md`
+- `audit-plan-{feature}.md`
+- `review-{feature}.md`
 
-```text
-.claude/output/   # Claude Code
-.codex/output/    # Codex
-```
-
-Common artifacts:
-
-```text
-research-{feature}.md
-audit-research-{feature}.md
-plan-{feature}.md
-audit-plan-{feature}.md
-review-{feature}.md
-```
-
-These files serve as resumable state. To resume after context loss, read the output files and continue at the next unfinished phase.
-
----
-
-## Integration with AGENTS.md
-
-All skills reference the project's `AGENTS.md`:
-
-1. **Research** reads `AGENTS.md` to understand existing patterns
-2. **Audit** checks plan compliance against `AGENTS.md`
-3. **Implement** follows `AGENTS.md` before writing files
-4. **Code Review** checks `AGENTS.md` adherence in changed files
+To resume work after context compaction or across sessions, simply invoke `/rpi {feature}`. RPI will detect the existing documents and pick up seamlessly at the next unfinished phase.

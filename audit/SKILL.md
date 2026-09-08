@@ -1,190 +1,96 @@
 ---
 name: audit
-description: Validates research or plan against hallucination, overscoping, and traceability. Produces a clear PASS/WARN/FAIL verdict.
+description: Adversarial quality gate for research or plans. Validates evidence integrity, scope balance, safety, and AGENTS.md compliance with PASS/WARN/FAIL verdicts.
 ---
 
 # Audit Skill
 
-Quality gate that validates a research document or plan before the next phase begins.
+Quality gate that critically validates research findings or implementation plans before committing to code changes.
+
+## When to Run
+
+- `/audit research`: Validates research output before planning (recommended for complex or high-risk features).
+- `/audit plan`: Validates the implementation plan before user approval and coding (mandatory quality gate).
+
+## Adversarial Mindset & Subagent Execution
+
+- **Avoid Self-Grading Bias**: Auditing your own plan in the same conversation turn can lead to sycophancy. When subagents (`invoke_subagent` or `Task`) are available, delegate the audit to a dedicated subagent with an adversarial reviewer role.
+- **Evidence-Based Verification**: Check claims against actual code files and authoritative sources, not the subject document's claims.
 
 ---
 
-## Agent Compatibility
+## The Four Audit Checks
 
-- OUTPUT_DIR: `.claude/output` for Claude Code, `.codex/output` for Codex CLI.
-- If an assumption needs user confirmation, ask directly — don't auto-fail.
+### Check 1: Evidence Integrity (Hallucination & Fabrication Guard)
+- **Claim Grounding**: Are all technical claims, library methods, and APIs grounded in existing code or verified documentation?
+- **Requirements Traceability**: Does every requirement originate from the user, Jira, PRD, or a clearly documented technical necessity?
+- **Verdict**:
+  - `PASS`: All claims grounded; assumptions explicitly labeled.
+  - `WARN`: Minor unconfirmed assumptions that carry low technical risk.
+  - `FAIL`: Invented requirements, non-existent APIs, or fabricated libraries.
 
-## Audit Types
+### Check 2: Scope Balance (Over- vs. Under-Engineering)
+- **Overengineering**: Are there unrequested abstractions, unnecessary configuration files, premature optimizations, or unwarranted design pattern overhauls?
+- **Underengineering**: Are edge cases, error states, empty states, input validation, and boundary conditions addressed?
+- **Verdict**:
+  - `PASS`: Balanced, minimal sufficient implementation.
+  - `WARN`: Minor scope additions that can easily be deferred.
+  - `FAIL`: Major unrequested scope creep or missing core acceptance criteria.
 
-- `/audit research` — Validates research output before planning.
-- `/audit plan` — Validates plan output before implementation.
+### Check 3: Feasibility, Safety & Blast Radius
+- **Breaking Changes**: Are public API contracts or database schemas modified without backward compatibility or rollback plans?
+- **Security & Secrets**: Does the proposal introduce credentials, SQL injection, bypass authorization, or leak sensitive data?
+- **Test Feasibility**: Are tests testing actual business logic rather than tautological mocks? Are dangerous tests (e.g. against non-local DBs) prevented?
+- **Verdict**:
+  - `PASS`: Safe, bounded blast radius, verified rollback/test strategy.
+  - `WARN`: Minor edge-case risk with noted mitigation.
+  - `FAIL`: High risk of data loss, breaking migration, or security regression.
 
----
-
-## How to Run an Audit
-
-### 1. Load Context
-
-```
-Required:
-├── Artifact to audit (research-{feature}.md or plan-{feature}.md)
-├── Original requirements (Jira description, PRD, or original prompt)
-└── AGENTS.md (project conventions)
-```
-
-### 2. Run the Three Checks
-
-For each check: list findings, then give a verdict.
-
----
-
-## Check 1: Hallucination — Is anything invented?
-
-Hallucination = a claim, requirement, or decision that is **not traceable** to the original requirements and is **not a reasonable technical necessity**.
-
-### How to Check
-
-For each requirement, decision, or task in the artifact:
-- Can it be traced to the PRD / Jira / prompt? → **Traceable**
-- Is it a reasonable inference from context or technical necessity? → **Justified**
-- Is it invented with no basis? → **Hallucination**
-
-**Important:** If something looks like an assumption, **ask the user first** before marking it as a hallucination. If the user confirms it → "User-confirmed assumption" (not a hallucination).
-
-### Verdicts
-
-| Finding | Verdict |
-|---------|---------|
-| No hallucinations found | ✅ PASS |
-| Minor assumptions (user-confirmed or clearly justified) | ⚠️ WARN |
-| Invented requirements with no basis | ❌ FAIL |
+### Check 4: Project Compliance (AGENTS.md & Profiles)
+- **Rules & Conventions**: Does the plan follow `AGENTS.md` and the appropriate stack profile in `profiles/` (`flutter.md`, `frontend.md`, `backend.md`, `scripts.md`)?
+- **Reuse**: Does it leverage existing project helpers, tokens, and components instead of rewriting them?
+- **Verdict**:
+  - `PASS`: 100% compliant with established conventions.
+  - `WARN`: Justified deviation with clear explanation.
+  - `FAIL`: Flagrant violation of established codebase architecture.
 
 ---
 
-## Check 2: Scope Balance — Is it the right amount of work?
+## Overall Verdict Matrix
 
-Overengineering = adding things not required (abstractions, configs, future-proofing).
-Underengineering = missing requirements, missing error handling, missing edge cases.
-
-### How to Check
-
-**Overengineering signals:**
-- Abstractions or layers that serve no current requirement
-- Configuration options not asked for
-- "Future-proofing" without specification
-- New patterns when existing patterns suffice
-
-**Underengineering signals:**
-- PRD requirements with no corresponding task or coverage
-- Happy-path-only implementation (missing error/empty/loading states)
-- Missing input validation or auth checks
-- Acceptance criteria with no task addressing them
-
-### Verdicts
-
-| Finding | Verdict |
-|---------|---------|
-| Nothing extraneous, nothing missing | ✅ PASS |
-| Minor scope issues that don't block | ⚠️ WARN |
-| Significant scope creep or requirement gaps | ❌ FAIL |
-
----
-
-## Check 3: Traceability — Does every requirement have coverage?
-
-Build a simple matrix: each requirement → covered by task(s) or explained why not.
-
-| Requirement | Covered by | Status |
-|-------------|------------|--------|
-| R1: {desc} | T1, T3 | ✅ Full |
-| R2: {desc} | T2 | ✅ Full |
-| R3: {desc} | — | ❌ Missing |
-
-### Verdicts
-
-| Finding | Verdict |
-|---------|---------|
-| All requirements covered | ✅ PASS |
-| Some partial coverage with clear reason | ⚠️ WARN |
-| Requirements with no coverage | ❌ FAIL |
-
----
-
-## Overall Verdict
-
-| Result | Meaning | Action |
-|--------|---------|--------|
-| **PASS** | All checks green or warn-level | Proceed to next phase |
-| **WARN** | Minor issues noted, nothing blocking | Proceed with caution; note items for review |
-| **FAIL** | At least one check failed | Stop; fix issues; re-audit |
+| Verdict | Criteria | Action |
+|---------|----------|--------|
+| **PASS** | All checks PASS (or acceptable low-risk WARNs) | Proceed to next phase or user approval. |
+| **WARN** | Non-blocking observations; carry forward to review | Proceed with noted mitigations. |
+| **FAIL** | One or more checks FAIL | **Stop.** Revise research/plan and re-audit. |
 
 ---
 
 ## Output Template
 
-Save to `OUTPUT_DIR/audit-{type}-{feature}.md`:
+Save to `OUTPUT_DIR/audit-{type}-{feature}.md` (or return inline for Fast-Path workflows):
 
 ```markdown
 # Audit Report: {Feature} ({Research / Plan})
 
-## Check 1: Hallucination
-**Verdict: {PASS / WARN / FAIL}**
+## Overall Verdict: {PASS / WARN / FAIL}
 
-Findings:
-- {item}: {Traceable / Justified / Hallucination — reason}
-
-{If hallucination: List what must be removed or confirmed}
-
----
-
-## Check 2: Scope Balance
-**Verdict: {PASS / WARN / FAIL}**
-
-Overengineering findings:
-- {item or "None"}
-
-Underengineering findings:
-- {item or "None"}
-
-{Recommended additions or removals}
+### Summary
+| Check | Status | Notes |
+|-------|--------|-------|
+| 1. Evidence Integrity | {PASS / WARN / FAIL} | {Brief note} |
+| 2. Scope Balance | {PASS / WARN / FAIL} | {Brief note} |
+| 3. Feasibility & Safety | {PASS / WARN / FAIL} | {Brief note} |
+| 4. Project Compliance | {PASS / WARN / FAIL} | {Brief note} |
 
 ---
 
-## Check 3: Traceability
+### Blocking Issues (Must resolve before proceeding)
+{List specific files/requirements or "None"}
 
-| Requirement | Covered by | Status |
-|-------------|------------|--------|
-| R1: {desc} | {tasks} | ✅ / ⚠️ / ❌ |
+### Non-Blocking Recommendations (Carried forward)
+{List items to verify during implementation/code review or "None"}
 
-**Verdict: {PASS / WARN / FAIL}**
-
----
-
-## Pattern Compliance (Plan Audit Only)
-
-| Pattern | Status | Notes |
-|---------|--------|-------|
-| {pattern from AGENTS.md} | ✅ / ❌ | {notes} |
-
----
-
-## Overall: {PASS / WARN / FAIL}
-
-### Blocking Issues (must fix before proceeding)
-{List or "None"}
-
-### Non-Blocking Issues (noted for awareness)
-{List or "None"}
-
-### Next Steps
-1. {action}
-```
-
----
-
-## Quick Commands
-
-```
-/audit research  — Audit the research output
-/audit plan      — Audit the plan output
+### Next Action
+{Proceed to User Approval / Revise Plan / Clarify with User}
 ```
