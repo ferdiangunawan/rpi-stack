@@ -199,10 +199,6 @@ sync_skills() {
     cp -R "$SCRIPT_DIR/profiles" "$dest/"
   fi
 
-  # Clean up any legacy extras or old hookify files
-  rm -rf "$dest/audit-security" "$dest/audit-performance" "$dest/scripts"
-  rm -f "$HOME/.claude"/hookify.rpi-*.local.md 2>/dev/null || true
-
   echo -e "${GREEN}$label skills installed.${NC}"
 }
 
@@ -214,25 +210,38 @@ clean_skills() {
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "Would remove: SKILL.md"
-    for skill in "${SKILL_DIRS[@]}" profiles audit-security audit-performance scripts; do
+    for skill in "${SKILL_DIRS[@]}" profiles; do
       echo "Would remove: $skill/"
     done
     return
   fi
 
   rm -f "$dest/SKILL.md"
-  for skill in "${SKILL_DIRS[@]}" profiles audit-security audit-performance scripts; do
+  for skill in "${SKILL_DIRS[@]}" profiles; do
     rm -rf "$dest/$skill"
   done
-  rm -f "$HOME/.claude"/hookify.rpi-*.local.md 2>/dev/null || true
 
   echo -e "${GREEN}$label RPI Stack skills removed.${NC}"
 }
 
 if [[ "$CLEAN" -eq 1 ]]; then
-  clean_skills "$CLAUDE_SKILLS" "Claude Code"
-  clean_skills "$CODEX_SKILLS" "Codex"
-  clean_skills "$GEMINI_SKILLS" "Antigravity/Gemini"
+  if [[ "$SPECIFIC_TARGET" -eq 0 ]]; then
+    INSTALL_CLAUDE=1
+    INSTALL_CODEX=1
+    INSTALL_GEMINI=1
+  fi
+  if [[ "$INSTALL_CLAUDE" -eq 1 ]]; then
+    clean_skills "$CLAUDE_SKILLS" "Claude Code"
+  fi
+  if [[ "$INSTALL_CODEX" -eq 1 ]]; then
+    clean_skills "$CODEX_SKILLS" "Codex"
+  fi
+  if [[ "$INSTALL_GEMINI" -eq 1 ]]; then
+    clean_skills "$GEMINI_SKILLS" "Antigravity/Gemini"
+  fi
+  if [[ "$INSTALL_PROJECT" -eq 1 ]]; then
+    clean_skills "$PROJECT_SKILLS" "Project-Local"
+  fi
   exit 0
 fi
 

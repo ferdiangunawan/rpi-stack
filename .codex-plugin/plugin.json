@@ -1,7 +1,7 @@
 {
   "name": "rpi-stack",
   "version": "2.0.0",
-  "description": "Adaptive Research-Plan-Implement workflow skills for Claude Code, Codex, and Antigravity.",
+  "description": "Flexible research, planning, implementation, audit, and code review skills for coding agents.",
   "author": {
     "name": "Kick Avenue",
     "email": "",
@@ -26,8 +26,8 @@
   "skills": "./",
   "interface": {
     "displayName": "RPI Stack",
-    "shortDescription": "Adaptive Research, Plan, Implement, Audit, and Code Review workflows for AI coding agents.",
-    "longDescription": "RPI Stack provides an adaptive 6-skill workflow system for Claude Code, OpenAI Codex, and Google Antigravity / Gemini CLI. Features adaptive depth (Fast-Path for bugfixes, Deep-Path for multi-step features), smart clarification with trade-off recommendations, adversarial quality gates, pluggable stack profiles (Flutter, Frontend Web, Backend API, Scripts), and behavioral guardrails.",
+    "shortDescription": "Flexible research, plan, implement, audit, and code review skills.",
+    "longDescription": "RPI Stack provides six coding skills that can be used individually or together. Agents select phases by uncertainty and risk, ground decisions in current sources, respect task authorization, and verify changes proportionately. Optional profiles cover backend, web frontend, Flutter, and scripts.",
     "developerName": "Kick Avenue",
     "category": "Productivity",
     "capabilities": [

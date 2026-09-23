@@ -1,113 +1,23 @@
 ---
 name: rpi
-description: Orchestrates adaptive Research-Plan-Implement workflows with quality gates. Supports Fast-Path for bugfixes and Deep-Path for multi-step features.
+description: Coordinate research, planning, implementation, audit, and review for a software task, using only the phases its uncertainty and risk justify.
 ---
 
-# RPI — Research, Plan, Implement (Orchestrator)
+# RPI
 
-The core workflow orchestrator that coordinates research, planning, implementation, quality gates, and code review with adaptive depth.
+Carry the user's request from the current state to a useful outcome. Select phases by what remains unknown or risky, not by ticket type or file count.
 
-```text
-Tier 1 (Fast-Path):  Grounded Plan & Verification ───────────► Implement ──► Scoped Review
-Tier 2 (Deep-Path):  Research ──► Audit ──► Plan ──► Audit ──► User Gate ──► Implement ──► Code Review
-```
+## Route the work
 
----
+1. Read the request, applicable instructions, current worktree state, and any existing task artifacts. Check whether older artifacts still match the current code and requirements.
+2. Establish the needed outcome and authorization. A request to investigate or plan alone ends with findings or a plan. A request to implement authorizes ordinary scoped edits; ask only for a material missing decision or an action that needs separate approval under the active instructions.
+3. Use [research](../research/SKILL.md) when requirements, current behavior, or dependencies are unclear. Use [plan](../plan/SKILL.md) when implementation choices or sequencing need resolution. Use [audit](../audit/SKILL.md) when evidence checking would reduce a real risk. Implement with [implement](../implement/SKILL.md) when authorized, then inspect the result with [code-review](../code-review/SKILL.md) at a depth proportional to the change.
+4. Resolve material findings and report what changed, what was verified, and what remains uncertain. Do not present a static check as runtime proof.
 
-## Agent Compatibility & Ecosystem
+For a small, well-understood edit, this may be inspect → edit → focused check → diff review. For unfamiliar or consequential work, keep distinct research and plan decisions before editing. A source link or issue number alone does not make a full workflow necessary.
 
-- **Output Directory**: Writes artifacts to `OUTPUT_DIR` (`.claude/output`, `.codex/output`, or project artifacts directory) when requested or in multi-session mode; supports inline conversational handoffs for fast iteration.
-- **Subagent Parallelism**: When subagent tools are present (`invoke_subagent` in Antigravity, `Task` in Claude Code), delegates read-only research and adversarial review to subagents to preserve main agent context.
-- **Sub-skill Invocation**: Uses the `Skill` tool (Claude Code), prompts (Codex), or native skill/tool dispatch (Antigravity).
+## Working state
 
----
+Use conversation context for short tasks. When a durable artifact helps with a long task or handoff, use a project-appropriate location or the user's chosen path. Record evidence, decisions, status, and the next action. Resume from it only after checking for drift; a file's existence does not prove a phase is complete.
 
-## Workflow Tiers (Adaptive Depth)
-
-Determine the appropriate workflow tier based on the task complexity:
-
-### Tier 1: Fast-Path (Tactical)
-**Criteria**: Localized bugfixes, small UI adjustments, single-component tweaks, or minor refactors (< 3 files, low architectural risk).
-1. **Grounded Plan**: Inspect the codebase, read `AGENTS.md`, and formulate a compact task breakdown with verification steps in one step.
-2. **Execute & Verify**: Implement the changes, run targeted lint/tests.
-3. **Scoped Review**: Inspect git diff for correctness, security, and pattern compliance.
-
-### Tier 2: Deep-Path (Strategic)
-**Criteria**: New features, multi-file architectural changes, database migrations, authentication, public API changes, or Jira tickets/PRDs.
-Follow the full 7-step quality-gated workflow below.
-
----
-
-## Deep-Path Execution Protocol
-
-### Step 1: Input Analysis & Naming
-- Derive a canonical feature slug: Jira key (e.g. `KB-1234` → `kb-1234`), issue title, or prompt slug (e.g. `csv-export`).
-- **Resumability Check**: If `OUTPUT_DIR/plan-{feature}.md` or `OUTPUT_DIR/research-{feature}.md` exists, read the existing state and resume at the first unfinished phase.
-
-### Step 2: Research (`/research`)
-- Gather requirements from Jira, PRD, or prompt.
-- Inspect codebase patterns and relevant profile in `profiles/`.
-- Apply **Smart Clarification**: use safe defaults for trivial UI/internal choices; batch material questions with opinionated recommendations.
-- Produces: `research-{feature}.md` (or structured research handoff).
-
-### Step 3: Research Audit (`/audit research`)
-*Optional for medium tasks; recommended for high-risk, exploratory, or unfamiliar areas.*
-- Quality check for evidence grounding and scope definition.
-- If **FAIL**: Resolve blockers or ask for missing specifications before planning.
-
-### Step 4: Plan (`/plan`)
-- Break down implementation into atomic, dependency-ordered tasks.
-- Specify exact verification commands for each task.
-- Document architectural approach, assumptions, and blast radius.
-- Produces: `plan-{feature}.md`.
-
-### Step 5: Plan Audit (`/audit plan`)
-- Mandatory quality gate before writing code:
-  - **Evidence Integrity**: No fabricated APIs or hallucinated libraries.
-  - **Scope Balance**: No unrequested overengineering; no missing edge cases.
-  - **Feasibility & Safety**: Rollback considered, database safety verified.
-  - **Pattern Compliance**: Follows `AGENTS.md` and domain profile.
-- If **FAIL**: Revise plan and re-audit until **PASS** or acceptable **WARN**.
-
-### Step 6: Human Gate (Approval)
-Present a concise plan summary to the user before writing any code:
-
-```text
-Feature: {feature-name} ({complexity})
-Tasks: {count} | New files: {n} | Modified: {n}
-
-Tasks:
-  T1: {title} (Verify: {command})
-  T2: {title} (Verify: {command})
-
-Quality Gate: Plan Audit: PASS ✓
-Proceed with implementation?
-```
-Wait for explicit confirmation before proceeding.
-
-### Step 7: Implement (`/implement`)
-- Execute tasks in dependency order.
-- Verify each task with targeted compilation/tests.
-- Never run unauthorized destructive tests against non-local databases.
-
-### Step 8: Code Review (`/code-review`)
-- Review changed files for Correctness, Security (OWASP), Performance, and Pattern Compliance.
-- Classify findings into P0 (Critical/Blocking), P1 (Important), and P2 (Minor).
-- **Rule**: If P0 issues exist, resolve them immediately and re-verify before marking work complete.
-
----
-
-## Quick Reference Commands
-
-```bash
-/rpi KB-1234               # Deep-Path feature from Jira
-/rpi https://docs/.../prd  # Deep-Path feature from PRD
-/rpi "Fix checkout total"  # Fast-Path or Deep-Path based on scope
-
-# Individual skills for targeted execution:
-/research <topic>
-/plan
-/audit plan
-/implement
-/code-review
-```
+Use tools and domain profiles available in the active environment. Delegation is optional and only applies when explicitly authorized by the user or applicable instructions. Follow the active rules for tests, external writes, and approvals; the workflow itself grants no extra permission.

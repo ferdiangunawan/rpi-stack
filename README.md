@@ -1,171 +1,77 @@
 # RPI Stack
 
-Adaptive Research-Plan-Implement workflow system for modern AI coding agents: **Claude Code**, **OpenAI Codex**, and **Google Antigravity / Gemini CLI**.
+Six portable skills for researching, planning, implementing, auditing, and reviewing software changes. Use one skill for a focused task, or use **rpi** to coordinate several. The workflow scales with uncertainty and risk; it does not require a full ceremony for every edit.
 
-Quality-gated, context-preserving, and engineered to maximize LLM agency without process overhead or learned helplessness.
+## Choose a skill
 
----
+| Skill | Use it when you need to… |
+| --- | --- |
+| [research](research/SKILL.md) | Establish requirements and current behavior from issues, source code, or documentation. |
+| [plan](plan/SKILL.md) | Resolve implementation choices, scope, and verification before editing. |
+| [audit](audit/SKILL.md) | Check research or a plan against the underlying evidence and project rules. |
+| [implement](implement/SKILL.md) | Make an authorized code change and verify it proportionately. |
+| [code-review](code-review/SKILL.md) | Find actionable defects in a diff or pull request. |
+| [rpi](rpi/SKILL.md) | Coordinate the phases that a larger request actually needs. |
 
-## Core Design Principles
+The [root skill](SKILL.md) is a short route map. The optional [profiles](profiles/) add checks for backend, web frontend, Flutter, and scripts. They are guidance, not replacements for your project's instructions or established code patterns.
 
-1. **Adaptive Depth** — Fast-Path for single-file bugfixes; Deep-Path for multi-step architectural features.
-2. **Smart Clarification** — Inspect first; apply safe documented defaults for internal choices; provide opinionated recommendations with trade-offs when asking material questions.
-3. **Decoupled Architecture** — 6 universal core skills with pluggable domain profiles (`flutter.md`, `frontend.md`, `backend.md`, `scripts.md`).
-4. **Adversarial Quality Gates** — Grounded evidence checks and qualitative PASS/WARN/FAIL verdicts.
-5. **Universal Agent Support** — First-class integration for Claude Code, Codex, and Antigravity / Gemini CLI.
+## How it works
 
----
+For a clear, contained fix, rpi can inspect the affected code, make the change, run a focused allowed check, and review the diff. For a change with unclear requirements or meaningful risk, it can research the source, settle an approach, audit important assumptions, implement when authorized, and review the result. A ticket ID, a file count, or the presence of an old plan does not by itself decide the path.
 
-## Architecture & Workflows
+Each skill respects the scope of the request. Asking for research or a plan does not authorize implementation. Asking for implementation covers ordinary scoped edits; a second approval is needed only where the active instructions or the action itself require it. Artifacts are optional for short tasks. For a long task, save evidence, decisions, status, and next steps in a project-appropriate location, then recheck them against current code when resuming.
 
-### Tier 1: Fast-Path (Tactical)
-For bugfixes, minor refactors, and isolated components (< 3 files):
-```text
-Input (Bug / Task) ──► Grounded Plan & Checks ──► Implement ──► Scoped Review
-```
+Verification distinguishes static checks, automated tests, and runtime evidence. Backend tests are never run on initiative. If explicitly requested, the agent must inspect the active database environment, refuse remote or unclear targets, and obtain approval for the exact command even when the database is confirmed local.
 
-### Tier 2: Deep-Path (Strategic)
-For complex features, new APIs, multi-file refactors, or Jira tickets:
-```text
-Input (Jira / PRD / Prompt)
-         │
-         ▼
-   [RESEARCH]  ─── Smart clarification (recommendations + trade-offs)
-         │          Output: research-{feature}.md
-         ▼
-  [AUDIT RESEARCH] ─── Optional check for high-risk / exploratory work
-         │
-         ▼
-     [PLAN]  ─── Verification-first task breakdown with dependency ordering
-         │       Output: plan-{feature}.md
-         ▼
-   [AUDIT PLAN]  ─── Quality gate: Evidence integrity + Scope balance + AGENTS.md
-         │ FAIL → revise and re-audit
-         ▼
-  [USER APPROVAL]  ─── Concise plan summary; wait for explicit human confirmation
-         │
-         ▼
-   [IMPLEMENT]  ─── Sequential execution with safety rails against remote test DBs
-         │          Output: code modifications
-         ▼
-  [CODE REVIEW]  ─── Multi-vector review: Correctness + Security + Performance (P0/P1/P2)
-                     Output: review-{feature}.md
-```
+## Install
 
----
+Clone the repository, then preview what the installer would copy:
 
-## The 6 Core Skills
-
-| Skill | Purpose | Key Innovations |
-|-------|---------|-----------------|
-| `rpi` | Workflow orchestrator | Adaptive depth (Fast-Path vs Deep-Path), subagent delegation, resumable artifacts |
-| `research` | Evidence gathering | Smart clarification (safe defaults + opinionated options), tool-agnostic connectors |
-| `audit` | Adversarial quality gate | Evidence integrity, scope balance, blast radius safety, PASS/WARN/FAIL verdicts |
-| `plan` | Task decomposition | Verification-first planning, dependency ordering, rollback considerations |
-| `implement` | Systematic execution | Safe test execution rules, universal progress tracking, targeted verification |
-| `code-review` | Multi-vector review | P0/P1/P2 classification, OWASP security, performance hot-paths, pattern compliance |
-
----
-
-## Pluggable Domain Profiles
-
-Domain conventions and framework-specific checklists live under `profiles/` rather than cluttering core skills:
-
-- **[`profiles/flutter.md`](profiles/flutter.md)**: StateNotifier/Bloc immutability, `const` constructors, widget splitting, controller disposal, `flutter analyze`/`flutter test`.
-- **[`profiles/frontend.md`](profiles/frontend.md)**: Next.js 15 App Router, Server vs Client components, Tailwind/Shadcn, a11y, hydration.
-- **[`profiles/backend.md`](profiles/backend.md)**: API architecture, database migrations, transaction boundaries, idempotency, N+1 query prevention, authorization.
-- **[`profiles/scripts.md`](profiles/scripts.md)**: POSIX shell standards, `set -euo pipefail`, dry-run support, argument validation.
-
----
-
-## Agent Platform Support
-
-| Agent | Skills Destination | Integration Details |
-|-------|--------------------|---------------------|
-| **Claude Code** | `~/.claude/skills` | Slash commands (`/rpi`) + native tool use |
-| **OpenAI Codex** | `~/.codex/skills` | Prompt phrasing (`Use rpi...`) + `.codex-plugin/plugin.json` metadata |
-| **Antigravity / Gemini CLI** | `~/.gemini/config/skills` | Slash commands or prompts + Native subagent execution |
-| **Project-Local** | `.agents/skills` or custom | Isolated to active repository via `./install.sh --project` |
-
----
-
-## Installation
-
-### Fast Install (Auto-detects active agents)
 ```bash
 git clone https://github.com/ferdiangunawan/rpi-stack.git
 cd rpi-stack
-./install.sh
-```
-
-### Targeted Installs
-```bash
-# Install specific agent
-./install.sh claude
-./install.sh codex
-./install.sh gemini
-
-# Install to all supported agents
-./install.sh all
-
-# Install into current project
-./install.sh --project
-
-# Dry run / preview actions
 ./install.sh --dry-run
-
-# Remove installed skills
-./install.sh --clean
 ```
 
-Or using Makefile:
+Install for a specific agent or into a project:
+
 ```bash
-make install     # Install to all detected agents
-make claude      # Claude Code only
-make codex       # Codex only
-make gemini      # Antigravity / Gemini CLI only
-make diff        # Compare repo skills with installed skills
-make clean       # Remove installed skills
+./install.sh codex
+./install.sh claude
+./install.sh gemini
+./install.sh --project
+./install.sh --project path/to/project/.agents/skills
 ```
 
----
+Running `./install.sh` without a target detects existing agent configuration directories; `./install.sh all` selects all three. The default destinations are `~/.codex/skills`, `~/.claude/skills`, and `~/.gemini/config/skills`. The installer copies the six skill folders, the root skill, and profiles. It replaces same-named destination folders, so inspect an existing installation before running it. It does not install anything merely because this repository was cloned. Restart an active agent session after installing so it can discover changed skills.
 
-## Usage Guide
+Run `./install.sh --clean codex` to remove this stack from one agent, or `./install.sh --clean --project path/to/project/.agents/skills` for a project install. Without a target, `--clean` selects all three agent destinations. Preview with `--dry-run` and run `./install.sh --help` for destination overrides. The [Makefile](Makefile) provides shortcuts such as `make codex`, `make dry-run`, and `make diff`.
 
-Run RPI in your agent's normal execution mode:
+## Use
 
-### Claude Code (Slash Commands)
+Ask for the outcome in normal language; skill invocation syntax varies by agent. Examples:
+
 ```text
-/rpi KB-1234              # Full workflow for Jira issue
-/rpi "Fix payment total"  # Adaptive Fast-Path or Deep-Path
-/research KB-1234         # Research only
-/audit plan               # Audit plan
-/code-review              # Review changed files
+Use research to trace why this callback fires twice and cite the relevant code.
+Use plan to design the smallest safe migration for this API field.
+Use audit to check this plan against the current code and project instructions.
+Use implement to apply the approved change.
+Use code-review to review my current diff for actionable defects.
+Use rpi to investigate and fix this issue, then report checks and remaining risks.
 ```
 
-### Codex / Copilot CLI (Natural Language Prompts)
+The skills work best when you supply the repository, issue or specification, desired outcome, and any limits on edits or verification. If a source is inaccessible, the agent should identify the gap instead of inventing its contents.
+
+## Repository layout
+
 ```text
-Use rpi to implement KB-1234
-Use research to inspect the authentication flow
-Use plan to break down this refactor
-Use code-review to review my git diff
+SKILL.md                 Route map
+rpi/SKILL.md             Workflow coordination
+research/SKILL.md        Evidence gathering
+plan/SKILL.md            Implementation design
+audit/SKILL.md           Evidence and plan checks
+implement/SKILL.md       Authorized code changes
+code-review/SKILL.md     Diff and PR review
+profiles/                Optional domain guidance
+install.sh               Local skill installer
 ```
-
-### Antigravity / Gemini CLI
-```text
-/rpi KB-1234
-Use rpi to implement this ticket
-```
-
----
-
-## Resumability
-
-RPI artifacts in `OUTPUT_DIR` (`.claude/output`, `.codex/output`, or project artifacts) provide durable state:
-- `research-{feature}.md`
-- `audit-research-{feature}.md`
-- `plan-{feature}.md`
-- `audit-plan-{feature}.md`
-- `review-{feature}.md`
-
-To resume work after context compaction or across sessions, simply invoke `/rpi {feature}`. RPI will detect the existing documents and pick up seamlessly at the next unfinished phase.
